@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}JK MARKETPLACE | Login{% endblock %}
+
+{% block dashboard_ui %}{% endblock %}
+{% block container_class %}{% endblock %}
+
+{% block auth_content %}
+<div class="auth-page">
+    <div class="auth-container">
+        <div class="auth-visual">
+            <div class="floating-shapes">
+                <div class="shape shape-1"></div>
+                <div class="shape shape-2"></div>
+                <div class="shape shape-3"></div>
+            </div>
+            <div class="visual-content">
+                <div style="font-size: 80px; margin-bottom: 20px;">🎒</div>
+                <h2 style="font-size: 32px; margin-bottom: 10px;">JK MARKETPLACE</h2>
+                <p style="color: rgba(255,255,255,0.7);">JK Citizen Portal</p>
+            </div>
+        </div>
+        <div class="auth-form-section">
+            <div style="margin-bottom: 40px;">
+                <h2 style="font-size: 28px; margin-bottom: 10px; color: var(--neon-blue);">Sign In</h2>
+                <p style="color: var(--text-secondary);">Access the sector's premium marketplace</p>
+            </div>
+            
+            {% if form.errors %}
+            <div class="error-message show" style="margin-bottom: 20px;">
+                <span>⚠️</span>
+                <span>Invalid credentials. Please try again.</span>
+            </div>
+            {% endif %}
+            
+            <form method="post" action="{% url 'accounts:login' %}">
+                {% csrf_token %}
+                <div class="input-group">
+                    <label>Email Address / Username</label>
+                    {{ form.username }}
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    {{ form.password }}
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-secondary);">
+                        <input type="checkbox" name="remember_me" style="accent-color: var(--neon-blue);"> Remember me
+                    </label>
+                    <a href="{% url 'accounts:password_reset_custom' %}" style="color: var(--neon-blue); text-decoration: none; font-size: 14px;">Forgot password?</a>
+                </div>
+                <button type="submit" class="glow-btn">Login</button>
+                <input type="hidden" name="next" value="{{ next }}">
+            </form>
+            
+            <p style="text-align: center; margin-top: 30px; color: var(--text-secondary); font-size: 14px;">
+                New to JK? <a href="{% url 'accounts:register' %}" style="color: var(--neon-blue); text-decoration: none;">Sign Up</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

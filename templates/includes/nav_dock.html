@@ -1,0 +1,33 @@
+{% load static %}
+<nav class="nav-dock">
+    {% if user.role != 'customer' %}
+    <a href="{% url 'inventory:command_center' %}" class="nav-item {% if request.resolver_match.url_name == 'command_center' %}active{% endif %}" data-label="Command Hub">
+        <span>🎯</span>
+    </a>
+    {% endif %}
+    <a href="{% url 'inventory:inventory_bay' %}" class="nav-item {% if request.resolver_match.url_name == 'inventory_bay' %}active{% endif %}" data-label="JK Shop">
+        <span>📦</span>
+    </a>
+    <a href="{% url 'orders:orbital_orders' %}" class="nav-item {% if request.resolver_match.url_name == 'orbital_orders' %}active{% endif %}" data-label="Your Orders">
+        <span>🛒</span>
+    </a>
+    {% if user.role == 'customer' %}
+    <a href="{% url 'inventory:wishlist' %}" class="nav-item {% if request.resolver_match.url_name == 'wishlist' %}active{% endif %}" data-label="Wishlist">
+        <span>❤️</span>
+    </a>
+    {% endif %}
+    {% if user.role != 'customer' %}
+    <a href="{% url 'analytics:data_core' %}" class="nav-item {% if request.resolver_match.url_name == 'data_core' %}active{% endif %}" data-label="Analytics">
+        <span>📊</span>
+    </a>
+    <a href="{% url 'inventory:all_reviews' %}" class="nav-item {% if request.resolver_match.url_name == 'all_reviews' %}active{% endif %}" data-label="Reviews">
+        <span>⭐</span>
+    </a>
+    <a href="{% url 'inventory:systems' %}" class="nav-item {% if request.resolver_match.url_name == 'systems' %}active{% endif %}" data-label="Systems">
+        <span>⚙️</span>
+    </a>
+    {% endif %}
+    <a href="{% url 'accounts:logout' %}" class="nav-item logout-item" data-label="Terminate Session">
+        <span>🚪</span>
+    </a>
+</nav>

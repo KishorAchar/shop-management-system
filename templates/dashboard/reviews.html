@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Customer Reviews{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>⭐ Customer Reviews</h1>
+    <p>All product reviews and feedback • {{ reviews.count }} total reviews</p>
+</div>
+
+<div class="glass-card" style="padding:0;overflow:hidden;">
+    {% if reviews %}
+    <table class="orbital-table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Customer</th>
+                <th>Rating</th>
+                <th>Review</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for review in reviews %}
+            <tr class="order-row" id="review-row-{{ review.id }}">
+                <td class="order-cell">
+                    <span style="font-weight:600;">{{ review.product.icon }} {{ review.product.name }}</span>
+                </td>
+                <td class="order-cell">
+                    <div class="customer-cell">
+                        <div class="customer-avatar">{{ review.customer.username|slice:":2"|upper }}</div>
+                        <span>{{ review.customer.username }}</span>
+                    </div>
+                </td>
+                <td class="order-cell">
+                    <span style="color:#ffb400;font-size:16px;">
+                        {% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}
+                    </span>
+                </td>
+                <td class="order-cell" style="max-width:280px;">
+                    {% if review.title %}<div style="font-weight:600;font-size:13px;margin-bottom:2px;">{{ review.title }}</div>{% endif %}
+                    <div style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:250px;" title="{{ review.body }}">{{ review.body }}</div>
+                </td>
+                <td class="order-cell">
+                    {% if review.is_approved %}
+                    <span class="status-orb status-completed">Approved</span>
+                    {% else %}
+                    <span class="status-orb status-pending">Pending</span>
+                    {% endif %}
+                </td>
+                <td class="order-cell" style="font-size:12px;color:var(--text-secondary);">{{ review.created_at|timesince }} ago</td>
+                <td class="order-cell">
+                    {% if not review.is_approved %}
+                    <button class="btn-icon" style="font-size:11px;padding:6px 12px;" onclick="moderateReview({{ review.id }}, 'approve')">✅ Approve</button>
+                    {% endif %}
+                    <button class="delete-btn" onclick="moderateReview({{ review.id }}, 'delete')" title="Delete Review">🗑️</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center;padding:80px;color:var(--text-secondary);">
+        <div style="font-size:64px;margin-bottom:20px;">⭐</div>
+        <h3>No reviews yet</h3>
+        <p>Customer reviews will appear here once customers start reviewing products.</p>
+    </div>
+    {% endif %}
+</div>
+
+<form id="csrf-form" style="display:none;">{% csrf_token %}</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function moderateReview(reviewId, action) {
+    const confirmMsg = action === 'delete' ? 'Delete this review?' : 'Approve this review?';
+    if (!confirm(confirmMsg)) return;
+
+    const formData = new FormData();
+    formData.append('action', action);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+    fetch(`/dashboard/review/${reviewId}/moderate/`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            if (action === 'delete') {
+                const row = document.getElementById('review-row-' + reviewId);
+                if (row) row.remove();
+                showNexusToast('Review deleted.', 'success', 'Done');
+            } else {
+                showNexusToast('Review approved.', 'success', 'Done');
+                setTimeout(() => location.reload(), 1000);
+            }
+        } else {
+            showNexusToast(data.error || 'Action failed.', 'error', 'Error');
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,478 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Orbital Tracking{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Orbital Tracking</h1>
+    <p>Order lifecycle monitoring • {{ orders.count }} orders in system</p>
+</div>
+
+<div class="order-filters">
+    <a href="{% url 'orders:orbital_orders' %}" class="filter-tag {% if selected_status == 'all' %}active{% endif %}">All Sectors</a>
+    <a href="?status=pending" class="filter-tag {% if selected_status == 'pending' %}active{% endif %}">Pending</a>
+    <a href="?status=processing" class="filter-tag {% if selected_status == 'processing' %}active{% endif %}">Processing</a>
+    <a href="?status=shipped" class="filter-tag {% if selected_status == 'shipped' %}active{% endif %}">Shipped</a>
+    <a href="?status=completed" class="filter-tag {% if selected_status == 'completed' %}active{% endif %}">Delivered</a>
+    <a href="?status=cancelled" class="filter-tag {% if selected_status == 'cancelled' %}active{% endif %}">Cancelled</a>
+</div>
+
+<div class="glass-card" style="padding:0; overflow:hidden;">
+    <table class="orbital-table">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Sector</th>
+                <th>Items</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody id="ordersTable">
+
+        {% for order in orders %}
+        <tr class="order-row">
+
+            <td class="order-cell">
+                <span class="order-id">#{{ order.order_id }}</span>
+            </td>
+
+            <td class="order-cell">
+                <div class="customer-cell">
+                    <div class="customer-avatar">
+                        {{ order.customer.username|slice:":2"|upper }}
+                    </div>
+                    <span>{{ order.customer.username }}</span>
+                </div>
+            </td>
+
+            <td class="order-cell">{{ order.sector }}</td>
+
+            <td class="order-cell">
+                {{ order.get_item_count }} items
+            </td>
+
+            <td class="order-cell">
+                <span class="status-orb status-{{ order.status }}">
+                    {{ order.get_status_display }}
+                </span>
+            </td>
+
+            <td class="order-cell">
+                <span class="order-total">₹{{ order.total }}</span>
+                {% if order.discount_amount > 0 %}
+                <div style="font-size:11px;color:#00ff88;margin-top:4px;">🎟️ You saved ₹{{ order.discount_amount }}</div>
+                {% endif %}
+            </td>
+
+            <td class="order-cell">
+
+                <button class="btn-icon"
+                        style="padding:8px 16px; font-size:12px;"
+                        onclick="viewOrder('{{ order.order_id }}')">
+                   👁️ Track
+                </button>
+                {% if user.role == 'customer' %}
+                <a href="{% url 'orders:download_invoice' order.order_id %}"
+                   class="btn-icon"
+                   style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; gap:4px; text-decoration:none; color:inherit;">
+                    📄 Invoice
+                </a>
+                {% if order.status == 'completed' or order.status == 'shipped' %}
+                {% for item in order.items.all %}
+                <button class="btn-icon"
+                        style="padding:8px 16px; font-size:12px; color:#ffb400; border-color:rgba(255,180,0,0.3);"
+                        onclick="openReviewModal('{{ item.product.id }}','{{ item.product.name|escapejs }}')">
+                    ⭐ Review
+                </button>
+                {% endfor %}
+                {% endif %}
+                {% endif %}
+
+                {% if user.role != 'customer' %}
+
+                <button class="btn-icon"
+                        style="padding:8px 16px; font-size:12px;"
+                        onclick="updateStatus('{{ order.order_id }}')">
+                    ✏️ Update
+                </button>
+
+                <button class="delete-btn"
+                        onclick="deleteOrder('{{ order.order_id }}')"
+                        title="Delete Order">
+                    🗑️
+                </button>
+
+                {% endif %}
+
+            </td>
+
+        </tr>
+        {% empty %}
+
+        <tr>
+            <td colspan="7"
+                class="order-cell"
+                style="text-align:center; padding:60px;">
+
+                <div style="font-size:48px;">📭</div>
+                <h3>No orders found</h3>
+                <p style="color:var(--text-secondary);">
+                    Orders will appear here when customers make purchases
+                </p>
+
+            </td>
+        </tr>
+
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<!-- Order Modal -->
+<div id="orderModal" class="modal">
+    <div class="modal-content" style="max-width:600px;">
+
+        <div class="modal-header">
+            <h3 class="modal-title" id="orderModalTitle">Order Details</h3>
+            <button class="modal-close" onclick="closeModal('order')">✕</button>
+        </div>
+
+        <div class="modal-body" id="orderModalBody"></div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-small"
+                    onclick="closeModal('order')">
+                Close
+            </button>
+            {% if user.role == 'customer' %}
+            <a id="invoiceDownloadBtn" href="#"
+               class="btn btn-small"
+               style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;">
+                📄 Download Invoice
+            </a>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+
+<!-- Status Modal -->
+<div id="statusModal" class="modal">
+    <div class="modal-content">
+
+        <div class="modal-header">
+            <h3 class="modal-title">Update Status</h3>
+            <button class="modal-close" onclick="closeModal('status')">✕</button>
+        </div>
+
+        <div class="modal-body">
+
+            <form id="statusForm" method="post">
+                {% csrf_token %}
+
+                <div class="input-group">
+                    <label>New Status</label>
+
+                    <select name="status"
+                            class="input-field">
+
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+
+                    </select>
+                </div>
+
+            </form>
+
+        </div>
+
+        <div class="modal-footer">
+
+            <button class="btn btn-secondary btn-small"
+                    onclick="closeModal('status')">
+                Cancel
+            </button>
+
+            <button class="btn btn-primary btn-small"
+                    onclick="submitStatus()">
+                Update
+            </button>
+
+        </div>
+
+    </div>
+</div>
+
+
+<!-- Review Modal -->
+<div id="reviewModal" class="modal">
+    <div class="modal-content" style="max-width:460px;">
+        <div class="modal-header">
+            <h3 class="modal-title">⭐ Write a Review</h3>
+            <button class="modal-close" onclick="closeModal('review')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="reviewForm" method="post">
+                {% csrf_token %}
+                <div id="review-product-name" style="font-size:16px;font-weight:700;margin-bottom:16px;color:#fff;"></div>
+                <div class="input-group">
+                    <label>Rating</label>
+                    <div id="star-selector" style="display:flex;gap:8px;font-size:32px;cursor:pointer;margin-top:4px;">
+                        <span data-val="1" onclick="setRating(1)">☆</span>
+                        <span data-val="2" onclick="setRating(2)">☆</span>
+                        <span data-val="3" onclick="setRating(3)">☆</span>
+                        <span data-val="4" onclick="setRating(4)">☆</span>
+                        <span data-val="5" onclick="setRating(5)">☆</span>
+                    </div>
+                    <input type="hidden" id="review-rating" name="rating" value="">
+                </div>
+                <div class="input-group">
+                    <label>Title <span style="font-size:11px;opacity:0.6;">(optional)</span></label>
+                    <input type="text" name="title" class="input-field" placeholder="Summary of your experience">
+                </div>
+                <div class="input-group">
+                    <label>Review</label>
+                    <textarea name="body" class="input-field" rows="4" placeholder="Share your experience..." required style="resize:vertical;"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-small" onclick="closeModal('review')">Cancel</button>
+            <button class="btn btn-primary btn-small" onclick="submitReview()">Submit Review</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+
+let currentOrderId = null;
+let reviewProductId = null;
+let selectedRating = 0;
+
+function openReviewModal(productId, productName) {
+    reviewProductId = productId;
+    selectedRating = 0;
+    document.getElementById('review-product-name').textContent = productName;
+    document.getElementById('review-rating').value = '';
+    setRating(0);
+    document.getElementById('reviewForm').reset();
+    openModal('review');
+}
+
+function setRating(val) {
+    selectedRating = val;
+    document.getElementById('review-rating').value = val;
+    const stars = document.querySelectorAll('#star-selector span');
+    stars.forEach((s, i) => {
+        s.textContent = i < val ? '★' : '☆';
+        s.style.color = i < val ? '#ffb400' : 'var(--text-secondary)';
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function submitReview() {
+    if (!selectedRating) {
+        Swal.fire({ title: 'Rating Required', text: 'Please select a star rating.', icon: 'warning', background: '#1a1a2e', color: '#e0e0ff' });
+        return;
+    }
+    const body = document.querySelector('#reviewForm textarea[name="body"]').value.trim();
+    const title = document.querySelector('#reviewForm input[name="title"]').value.trim();
+    if (!body) {
+        Swal.fire({ title: 'Review Required', text: 'Please write your review.', icon: 'warning', background: '#1a1a2e', color: '#e0e0ff' });
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('rating', selectedRating);
+    formData.append('title', title);
+    formData.append('body', body);
+    formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+    fetch(`/dashboard/product/${reviewProductId}/review/`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeModal('review');
+            Swal.fire({ title: 'Review Submitted! ⭐', text: 'Your feedback has been recorded.', icon: 'success', background: '#1a1a2e', color: '#e0e0ff', timer: 2000, showConfirmButton: false });
+            // Stars update on marketplace - store in sessionStorage so inventory page reflects it
+            if (data.new_avg) {
+                sessionStorage.setItem('reviewedProduct_' + reviewProductId, JSON.stringify({
+                    avg: data.new_avg,
+                    count: data.review_count
+                }));
+            }
+        } else {
+            Swal.fire({ title: 'Error', text: data.error || 'Could not submit review.', icon: 'error', background: '#1a1a2e', color: '#e0e0ff' });
+        }
+    })
+    .catch(() => Swal.fire({ title: 'Network Error', icon: 'error', background: '#1a1a2e', color: '#e0e0ff' }));
+}
+
+function openModal(modalName){
+    const modal = document.getElementById(modalName + 'Modal');
+    if(modal){
+        modal.classList.add('active');
+    }
+}
+
+function closeModal(modalName){
+    const modal = document.getElementById(modalName + 'Modal');
+    if(modal){
+        modal.classList.remove('active');
+    }
+}
+
+function viewOrder(orderId){
+
+    currentOrderId = orderId;
+
+    // Update invoice download link
+    const invoiceBtn = document.getElementById('invoiceDownloadBtn');
+    if (invoiceBtn) invoiceBtn.href = '/orders/' + orderId + '/invoice/';
+
+    fetch(`/orders/${orderId}/`)
+    .then(response => response.text())
+    .then(html => {
+
+        document.getElementById('orderModalBody').innerHTML = html;
+        document.getElementById('orderModalTitle').textContent =
+            `Order #${orderId}`;
+
+        // Inject status tracker for customers
+        const statusEl = document.querySelector('.status-orb.status-' + getOrderStatus(orderId));
+        injectOrderTracker(orderId);
+
+        openModal('order');
+    });
+}
+
+function getOrderStatus(orderId) {
+    // Find status from the table row
+    const rows = document.querySelectorAll('.order-row');
+    for (const row of rows) {
+        const idEl = row.querySelector('.order-id');
+        if (idEl && idEl.textContent.trim() === '#' + orderId) {
+            const statusEl = row.querySelector('[class*="status-orb"]');
+            if (statusEl) {
+                const cls = [...statusEl.classList].find(c => c.startsWith('status-') && c !== 'status-orb');
+                return cls ? cls.replace('status-', '') : '';
+            }
+        }
+    }
+    return '';
+}
+
+function injectOrderTracker(orderId) {
+    const status = getOrderStatus(orderId);
+    const steps = [
+        { key: 'pending',    label: 'Ordered',    icon: '🛒' },
+        { key: 'processing', label: 'Processing', icon: '⚙️' },
+        { key: 'shipped',    label: 'Shipped',    icon: '🚚' },
+        { key: 'completed',  label: 'Delivered',  icon: '✅' },
+    ];
+    const cancelledMap = { key: 'cancelled', label: 'Cancelled', icon: '❌' };
+    const isCancelled = status === 'cancelled';
+    const activeSteps = isCancelled ? [...steps.slice(0,1), cancelledMap] : steps;
+    const activeIdx   = isCancelled ? 1 : steps.findIndex(s => s.key === status);
+
+    let trackerHTML = `
+    <div style="padding:20px 0 10px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:16px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary,#888);margin-bottom:14px;">Order Progress</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;position:relative;">
+            <div style="position:absolute;top:18px;left:0;right:0;height:2px;background:rgba(255,255,255,0.08);z-index:0;"></div>
+            <div style="position:absolute;top:18px;left:0;height:2px;background:linear-gradient(90deg,#7c3aed,#4f46e5);z-index:1;width:${isCancelled ? '50' : Math.max(0,(activeIdx/(steps.length-1))*100).toFixed(0)}%;transition:width 0.5s;"></div>`;
+
+    activeSteps.forEach((step, i) => {
+        const done = i < activeIdx;
+        const active = i === activeIdx;
+        const color = isCancelled && i === 1 ? '#ef4444' : (active ? '#7c3aed' : done ? '#00ff88' : 'rgba(255,255,255,0.2)');
+        const textColor = active || done ? '#fff' : 'rgba(255,255,255,0.35)';
+        trackerHTML += `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;z-index:2;flex:1;">
+                <div style="width:36px;height:36px;border-radius:50%;border:2px solid ${color};background:${active||done ? color : 'rgba(0,0,0,0.4)'};display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.3s;">
+                    ${done ? '✓' : step.icon}
+                </div>
+                <span style="font-size:10px;color:${textColor};text-align:center;font-weight:${active?'700':'400'};letter-spacing:0.5px;">${step.label}</span>
+            </div>`;
+    });
+    trackerHTML += `</div></div>`;
+
+    const body = document.getElementById('orderModalBody');
+    if (body) body.insertAdjacentHTML('afterbegin', trackerHTML);
+}
+
+function updateStatus(orderId){
+
+    currentOrderId = orderId;
+
+    document.getElementById('statusForm').action =
+        `/orders/${orderId}/status/`;
+
+    openModal('status');
+}
+
+function submitStatus(){
+
+    const form = document.getElementById('statusForm');
+    const formData = new FormData(form);
+
+    fetch(form.action,{
+        method:'POST',
+        body:formData,
+        headers:{
+            'X-Requested-With':'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        if(data.success){
+            location.reload();
+        }else{
+            Swal.fire('Error', data.error, 'error');
+        }
+
+    });
+}
+
+/* DELETE USES main.js SweetAlert version */
+
+window.onclick = function(event){
+    if(event.target.classList.contains('modal')){
+        event.target.classList.remove('active');
+    }
+}
+
+</script>
+{% endblock %}

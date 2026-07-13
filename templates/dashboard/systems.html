@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Control Systems{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Control Systems</h1>
+    <p>System configuration & preferences</p>
+</div>
+
+<div class="settings-grid">
+    <!-- ── Sidebar Nav ── -->
+    <div class="settings-nav">
+        <div class="settings-tab active" onclick="switchSettingsTab(this, 'general')">
+            <div class="settings-tab-icon">🎛️</div>
+            <div>
+                <div style="font-weight: 600;">General</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Basic preferences</div>
+            </div>
+        </div>
+        <div class="settings-tab" onclick="switchSettingsTab(this, 'security')">
+            <div class="settings-tab-icon">🔐</div>
+            <div>
+                <div style="font-weight: 600;">Security</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Access control</div>
+            </div>
+        </div>
+        <div class="settings-tab" onclick="switchSettingsTab(this, 'notifications')">
+            <div class="settings-tab-icon">📡</div>
+            <div>
+                <div style="font-weight: 600;">Notifications</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Alert settings</div>
+            </div>
+        </div>
+        <div class="settings-tab" onclick="switchSettingsTab(this, 'integrations')">
+            <div class="settings-tab-icon">🔗</div>
+            <div>
+                <div style="font-weight: 600;">Integrations</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">External systems</div>
+            </div>
+        </div>
+        <div class="settings-tab" onclick="switchSettingsTab(this, 'coupons')">
+            <div class="settings-tab-icon">🎟️</div>
+            <div>
+                <div style="font-weight: 600;">Coupons</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Discount codes</div>
+            </div>
+        </div>
+        <div class="setting-item" style="border-bottom: none;">
+            <div class="setting-info">
+                <h4 style="color: var(--danger);">End Session</h4>
+                <p>Sign out of the current command center</p>
+            </div>
+            <a href="{% url 'accounts:logout' %}" class="btn-secondary" style="color: var(--danger);">Logout</a>
+        </div>
+    </div>
+
+    <!-- ── General ── -->
+    <div class="settings-content" id="settings-general">
+        <h3 style="margin-bottom: 30px;">General Configuration</h3>
+        <form method="post" action="{% url 'inventory:update_settings' %}">
+            {% csrf_token %}
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h4>Station Name</h4>
+                    <p>Display name for your command center</p>
+                </div>
+                <input type="text" name="station_name" class="input-field" value="{{ user.username }}'s Shop" style="width: 200px;">
+            </div>
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h4>Time Zone</h4>
+                    <p>Local temporal coordinates</p>
+                </div>
+                <select name="timezone" class="input-field" style="width: 200px;">
+                    <option value="UTC-8">UTC-08:00 Pacific</option>
+                    <option value="UTC-5">UTC-05:00 Eastern</option>
+                    <option value="UTC+0">UTC+00:00 GMT</option>
+                    <option value="UTC+1">UTC+01:00 Central European</option>
+                    <option value="UTC+5.5">UTC+05:30 India</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h4>Dark Matter Theme</h4>
+                    <p>High contrast interface mode</p>
+                </div>
+                <div class="toggle-switch {% if user.dark_theme %}active{% endif %}" onclick="toggleSetting(this, 'dark_theme')">
+                    <input type="hidden" name="dark_theme" value="{% if user.dark_theme %}true{% else %}false{% endif %}">
+                </div>
+            </div>
+            <div style="margin-top: 30px;">
+                <button type="submit" class="glow-btn" style="width: auto; padding: 12px 30px;">Save Changes</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ── Security ── -->
+    <div class="settings-content" id="settings-security" style="display: none;">
+        <h3 style="margin-bottom: 30px;">Security Protocols</h3>
+        <div class="setting-item">
+            <div class="setting-info"><h4>Two-Factor Authentication</h4><p>Require secondary verification</p></div>
+            <div class="toggle-switch" onclick="this.classList.toggle('active')"></div>
+        </div>
+        <div class="setting-item">
+            <div class="setting-info"><h4>Session Timeout</h4><p>Auto-logout after inactivity</p></div>
+            <select class="input-field" style="width: 200px;">
+                <option>15 minutes</option>
+                <option selected>30 minutes</option>
+                <option>1 hour</option>
+                <option>Never</option>
+            </select>
+        </div>
+        <div class="setting-item">
+            <div class="setting-info"><h4>Change Password</h4><p>Update your access credentials</p></div>
+            <a href="{% url 'accounts:password_change' %}" class="btn-icon" style="width: auto; padding: 10px 20px; text-decoration: none;">Change</a>
+        </div>
+    </div>
+
+    <!-- ── Notifications ── -->
+    <div class="settings-content" id="settings-notifications" style="display: none;">
+        <h3 style="margin-bottom: 30px;">Alert Configuration</h3>
+        <div class="setting-item">
+            <div class="setting-info"><h4>Order Notifications</h4><p>Incoming order alerts</p></div>
+            <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+        </div>
+        <div class="setting-item">
+            <div class="setting-info"><h4>Low Stock Warnings</h4><p>Inventory threshold alerts</p></div>
+            <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+        </div>
+        <div class="setting-item">
+            <div class="setting-info"><h4>Daily Reports</h4><p>Email summary of daily activity</p></div>
+            <div class="toggle-switch" onclick="this.classList.toggle('active')"></div>
+        </div>
+    </div>
+
+    <!-- ── Integrations ── -->
+    <div class="settings-content" id="settings-integrations" style="display: none;">
+        <h3 style="margin-bottom: 30px;">External Systems</h3>
+        <div class="setting-item">
+            <div class="setting-info"><h4>Payment Gateway</h4><p>Razorpay connection status</p></div>
+            <div style="display:flex;align-items:center;gap:10px;color:var(--neon-blue);">
+                <span style="width:8px;height:8px;background:var(--neon-blue);border-radius:50%;box-shadow:0 0 10px var(--neon-blue);"></span>Connected
+            </div>
+        </div>
+        <div class="setting-item">
+            <div class="setting-info"><h4>Analytics Engine</h4><p>Data processing service</p></div>
+            <div style="display:flex;align-items:center;gap:10px;color:#ffd700;">
+                <span style="width:8px;height:8px;background:#ffd700;border-radius:50%;"></span>Syncing
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Coupons ── -->
+    <div class="settings-content" id="settings-coupons" style="display: none;">
+        <h3 style="margin-bottom: 30px;">Coupon Management</h3>
+
+        {% if messages %}
+            {% for message in messages %}
+            <div class="glass-card" style="margin-bottom:16px;padding:12px 20px;color:{% if message.tags == 'error' %}var(--danger){% else %}var(--neon-blue){% endif %};">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Create Form -->
+        <div class="glass-card" style="margin-bottom:30px;">
+            <h4 style="margin-bottom:20px;">Create New Coupon</h4>
+            <form id="couponCreateForm" method="post" action="{% url 'inventory:manage_coupons' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div>
+                        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px;">Coupon Code *</label>
+                        <input type="text" name="code" id="coupon-code" class="input-field" placeholder="e.g. SAVE20" style="width:100%;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                    </div>
+                    <div>
+                        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px;">Discount Type *</label>
+                        <select name="discount_type" class="input-field" style="width:100%;">
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="fixed">Fixed Amount (₹)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px;">Discount Value *</label>
+                        <input type="number" name="discount_value" id="coupon-discount-value" class="input-field" placeholder="e.g. 20" min="0" step="0.01" style="width:100%;">
+                    </div>
+                    <div>
+                        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px;">Min Order Amount (₹)</label>
+                        <input type="number" name="min_order_amount" class="input-field" placeholder="0" min="0" step="0.01" style="width:100%;">
+                    </div>
+                    <div>
+                        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px;">Max Uses</label>
+                        <input type="number" name="max_uses" class="input-field" placeholder="100" min="1" style="width:100%;">
+                    </div>
+                    <div>
+                        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px;">Valid From</label>
+                        <input type="datetime-local" name="valid_from" class="input-field" style="width:100%;">
+                    </div>
+                    <div>
+                        <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px;">Valid To (optional)</label>
+                        <input type="datetime-local" name="valid_to" class="input-field" style="width:100%;">
+                    </div>
+                </div>
+                <button type="button" class="btn-primary" style="margin-top:20px;" onclick="submitCouponForm()">🎟️ Create Coupon</button>
+            </form>
+        </div>
+
+        <!-- Existing Coupons -->
+        <div class="glass-card">
+            <h4 style="margin-bottom:20px;">Existing Coupons ({{ coupons|length }})</h4>
+            {% if coupons %}
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border);">
+                            <th style="padding:10px;text-align:left;color:var(--text-secondary);">Code</th>
+                            <th style="padding:10px;text-align:left;color:var(--text-secondary);">Type</th>
+                            <th style="padding:10px;text-align:left;color:var(--text-secondary);">Value</th>
+                            <th style="padding:10px;text-align:left;color:var(--text-secondary);">Min Order</th>
+                            <th style="padding:10px;text-align:left;color:var(--text-secondary);">Uses</th>
+                            <th style="padding:10px;text-align:left;color:var(--text-secondary);">Expires</th>
+                            <th style="padding:10px;text-align:left;color:var(--text-secondary);">Status</th>
+                            <th style="padding:10px;text-align:left;color:var(--text-secondary);">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for coupon in coupons %}
+                        <tr style="border-bottom:1px solid var(--border);">
+                            <td style="padding:10px;font-weight:600;color:var(--neon-blue);">{{ coupon.code }}</td>
+                            <td style="padding:10px;">{{ coupon.get_discount_type_display }}</td>
+                            <td style="padding:10px;">{% if coupon.discount_type == 'percentage' %}{{ coupon.discount_value }}%{% else %}₹{{ coupon.discount_value }}{% endif %}</td>
+                            <td style="padding:10px;">₹{{ coupon.min_order_amount }}</td>
+                            <td style="padding:10px;">{{ coupon.used_count }} / {{ coupon.max_uses }}</td>
+                            <td style="padding:10px;">{% if coupon.valid_to %}<span style="color:#ffb400;">{{ coupon.valid_to|date:"d M Y H:i" }}</span>{% else %}<span style="color:var(--text-secondary);">No expiry</span>{% endif %}</td>
+                            <td style="padding:10px;">
+                                <span id="status-badge-{{ coupon.id }}" style="padding:3px 10px;border-radius:12px;font-size:12px;
+                                    background:{% if coupon.is_active %}rgba(0,255,136,0.15){% else %}rgba(255,59,59,0.15){% endif %};
+                                    color:{% if coupon.is_active %}#00ff88{% else %}var(--danger){% endif %};">
+                                    {% if coupon.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </td>
+                            <td style="padding:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                                <button onclick="toggleCoupon({{ coupon.id }})"
+                                    style="padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-primary);cursor:pointer;font-size:12px;">
+                                    Toggle
+                                </button>
+                                <form method="post" action="{% url 'inventory:manage_coupons' %}" style="display:inline;" onsubmit="return confirm('Delete coupon {{ coupon.code }}?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="coupon_id" value="{{ coupon.id }}">
+                                    <button type="submit" style="padding:4px 12px;border-radius:6px;border:1px solid var(--danger);background:transparent;color:var(--danger);cursor:pointer;font-size:12px;">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p style="color:var(--text-secondary);text-align:center;padding:30px 0;">No coupons yet. Create your first one above!</p>
+            {% endif %}
+        </div>
+    </div>
+
+</div><!-- end settings-grid -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function switchSettingsTab(tab, contentId) {
+    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.settings-content').forEach(c => c.style.display = 'none');
+    const content = document.getElementById('settings-' + contentId);
+    if (content) {
+        content.style.display = 'block';
+        content.style.opacity = '0';
+        content.style.transform = 'translateY(10px)';
+        setTimeout(() => {
+            content.style.transition = 'all 0.3s ease';
+            content.style.opacity = '1';
+            content.style.transform = 'translateY(0)';
+        }, 50);
+    }
+}
+
+function toggleSetting(el, name) {
+    el.classList.toggle('active');
+    const input = el.querySelector('input');
+    if (input) input.value = el.classList.contains('active') ? 'true' : 'false';
+}
+
+function submitCouponForm() {
+    const code = document.getElementById('coupon-code').value.trim();
+    const val = document.getElementById('coupon-discount-value').value.trim();
+    if (!code) { alert('Please enter a coupon code.'); return; }
+    if (!val) { alert('Please enter a discount value.'); return; }
+    document.getElementById('couponCreateForm').submit();
+}
+
+function toggleCoupon(couponId) {
+    const form = new FormData();
+    form.append('action', 'toggle');
+    form.append('coupon_id', couponId);
+    form.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    fetch("{% url 'inventory:manage_coupons' %}", { method: 'POST', body: form })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const badge = document.getElementById('status-badge-' + couponId);
+                if (data.is_active) {
+                    badge.textContent = 'Active';
+                    badge.style.background = 'rgba(0,255,136,0.15)';
+                    badge.style.color = '#00ff88';
+                } else {
+                    badge.textContent = 'Inactive';
+                    badge.style.background = 'rgba(255,59,59,0.15)';
+                    badge.style.color = 'var(--danger)';
+                }
+            }
+        });
+}
+
+// Auto-open tab from URL param e.g. ?tab=coupons
+document.addEventListener('DOMContentLoaded', function () {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+        const tabEl = document.querySelector(`[onclick*="'${tab}'"]`);
+        if (tabEl) tabEl.click();
+    }
+});
+</script>
+{% endblock %}

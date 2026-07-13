@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Command Center{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Command Center</h1>
+    <p>Real-time operational overview • {{ user.get_role_display }} • {{ user.sector }}</p>
+</div>
+
+<div class="hex-grid">
+    <div class="hex-stat sales">
+        <div class="hex-bg"></div>
+        <div class="hex-content">
+            <div class="hex-icon">💎</div>
+            <div class="hex-value">₹{{ total_sales|floatformat:1 }}K</div>
+            <div class="hex-label">Revenue</div>
+        </div>
+    </div>
+    <div class="hex-stat orders">
+        <div class="hex-bg"></div>
+        <div class="hex-content">
+            <div class="hex-icon">⚡</div>
+            <div class="hex-value">{{ total_orders }}</div>
+            <div class="hex-label">Orders</div>
+        </div>
+    </div>
+    <div class="hex-stat products">
+        <div class="hex-bg"></div>
+        <div class="hex-content">
+            <div class="hex-icon">🚀</div>
+            <div class="hex-value">{{ total_products }}</div>
+            <div class="hex-label">Products</div>
+        </div>
+    </div>
+    <div class="hex-stat customers">
+        <div class="hex-bg"></div>
+        <div class="hex-content">
+            <div class="hex-icon">🌟</div>
+            <div class="hex-value">{{ total_customers }}K</div>
+            <div class="hex-label">Users</div>
+        </div>
+    </div>
+</div>
+
+<div class="timeline-container">
+    <div class="glass-card">
+        <h3 style="margin-bottom: 30px; font-size: 20px;">Live Transmission</h3>
+        <div class="activity-timeline">
+            {% for order in recent_orders %}
+            <div class="timeline-item">
+                <div class="timeline-time">{{ order.created_at|timesince }} ago</div>
+                <div style="font-weight: 600; margin-bottom: 5px;">
+                    Order #{{ order.order_id }} • {{ order.get_status_display }}
+                </div>
+                <div style="color: var(--text-secondary); font-size: 14px;">
+                    {{ order.customer.username }} • ₹{{ order.total }}
+                </div>
+            </div>
+            {% empty %}
+            <div class="timeline-item">
+                <div style="color: var(--text-secondary);">No recent activity</div>
+            </div>
+            {% endfor %}
+            
+            {% for product in low_stock %}
+            <div class="timeline-item" style="border-left: 2px solid var(--neon-pink);">
+                <div class="timeline-time" style="color: var(--neon-pink);">ALERT</div>
+                <div style="font-weight: 600; margin-bottom: 5px; color: var(--neon-pink);">
+                    Low Stock: {{ product.name }}
+                </div>
+                <div style="color: var(--text-secondary); font-size: 14px;">
+                    Only {{ product.stock }} units remaining
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="glass-card" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+        <div class="goal-circle" style="width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(var(--card-bg) 69%, transparent 70%), conic-gradient(var(--neon-blue) {{ capped_percentage }}%, var(--border) 0); display: flex; align-items: center; justify-content: center; position: relative;">
+            <div style="z-index: 2; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                <div style="font-size: 36px; font-weight: 700; color: var(--text-primary);">{{ sales_percentage|floatformat:0 }}%</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Target</div>
+            </div>
+        </div>
+        <h3 style="margin-top: 30px; margin-bottom: 10px;">Monthly Goal</h3>
+        <p style="color: var(--text-secondary); font-size: 14px;">₹{{ total_sales|floatformat:0 }} / ₹{{ target_sales|floatformat:0 }}</p>
+        
+        {% if goal_achieved %}
+        <div class="achievement-badge">
+            Monthly goals achieved
+        </div>
+        <style>
+            .achievement-badge {
+                margin-top: 20px;
+                padding: 8px 20px;
+                background: rgba(0, 243, 255, 0.1);
+                border: 1px solid var(--neon-blue);
+                border-radius: 30px;
+                color: var(--neon-blue);
+                font-size: 14px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+                animation: pulse-glow 2s infinite alternate;
+            }
+            @keyframes pulse-glow {
+                from { opacity: 0.8; box-shadow: 0 0 10px rgba(0, 243, 255, 0.2); }
+                to { opacity: 1; box-shadow: 0 0 25px rgba(0, 243, 255, 0.5); }
+            }
+        </style>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Reviews & Feedback Dashboard Section -->
+<div style="margin-top:40px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div>
+            <h2 style="font-size:20px;margin:0;">⭐ Customer Reviews & Feedback</h2>
+            <p style="color:var(--text-secondary);font-size:13px;margin:4px 0 0;">Recent product reviews from customers</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+            {% if pending_reviews > 0 %}
+            <span style="background:rgba(255,180,0,0.15);color:#ffb400;border:1px solid rgba(255,180,0,0.3);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;">
+                {{ pending_reviews }} Pending
+            </span>
+            {% endif %}
+            <a href="{% url 'inventory:all_reviews' %}" class="btn btn-secondary btn-small">View All</a>
+        </div>
+    </div>
+    <div class="glass-card" style="padding:0;overflow:hidden;">
+        {% if recent_reviews %}
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:14px 20px;text-align:left;font-size:12px;color:var(--text-secondary);font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Product</th>
+                    <th style="padding:14px 20px;text-align:left;font-size:12px;color:var(--text-secondary);font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Customer</th>
+                    <th style="padding:14px 20px;text-align:left;font-size:12px;color:var(--text-secondary);font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Rating</th>
+                    <th style="padding:14px 20px;text-align:left;font-size:12px;color:var(--text-secondary);font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Review</th>
+                    <th style="padding:14px 20px;text-align:left;font-size:12px;color:var(--text-secondary);font-weight:600;letter-spacing:0.5px;text-transform:uppercase;">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for review in recent_reviews %}
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:14px 20px;font-weight:600;font-size:13px;">{{ review.product.icon }} {{ review.product.name }}</td>
+                    <td style="padding:14px 20px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#00f3ff,#bc13fe);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;">{{ review.customer.username|slice:":2"|upper }}</div>
+                            <span style="font-size:13px;">{{ review.customer.username }}</span>
+                        </div>
+                    </td>
+                    <td style="padding:14px 20px;">
+                        <span style="color:#ffb400;font-size:14px;">
+                            {% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}
+                        </span>
+                        <span style="font-size:12px;color:var(--text-secondary);margin-left:4px;">{{ review.rating }}/5</span>
+                    </td>
+                    <td style="padding:14px 20px;max-width:300px;">
+                        {% if review.title %}<div style="font-size:12px;font-weight:600;margin-bottom:2px;">{{ review.title }}</div>{% endif %}
+                        <div style="font-size:12px;color:var(--text-secondary);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:280px;">{{ review.body }}</div>
+                    </td>
+                    <td style="padding:14px 20px;font-size:12px;color:var(--text-secondary);">{{ review.created_at|timesince }} ago</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align:center;padding:60px;color:var(--text-secondary);">
+            <div style="font-size:48px;margin-bottom:16px;">⭐</div>
+            <h3>No reviews yet</h3>
+            <p>Customer reviews will appear here</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

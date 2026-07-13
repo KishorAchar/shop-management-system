@@ -1,0 +1,1305 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inventory Bay{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Quick Order Modal */
+    .quick-order-product-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 2px dashed rgba(0,243,255,0.3);
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+        background: rgba(0,243,255,0.03);
+        color: var(--text-secondary);
+        font-size: 13px;
+        text-align: center;
+    }
+    .img-upload-label:hover { border-color: rgba(0,243,255,0.7); background: rgba(0,243,255,0.07); }
+    .img-upload-label input[type=file] { display: none; }
+    .img-upload-label .upload-icon { font-size: 32px; }
+    .img-upload-preview {
+        width: 100%;
+        max-height: 140px;
+        object-fit: contain;
+        border-radius: 8px;
+        border: 1px solid rgba(0,243,255,0.2);
+        margin-top: 8px;
+        display: none;
+    }
+
+    /* Quick Order Modal */
+    .quick-order-product-header {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        background: rgba(0, 243, 255, 0.04);
+        border: 1px solid rgba(0, 243, 255, 0.15);
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 24px;
+    }
+    .quick-order-icon {
+        font-size: 48px;
+        filter: drop-shadow(0 0 8px rgba(0,243,255,0.4));
+        flex-shrink: 0;
+    }
+    .quick-order-meta {
+        flex: 1;
+    }
+    .quick-order-name {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 4px;
+    }
+    .quick-order-sku {
+        font-size: 11px;
+        color: var(--text-secondary);
+        font-family: monospace;
+        margin-bottom: 6px;
+    }
+    .quick-order-price {
+        font-size: 22px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #00f3ff, #bc13fe);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .quick-order-stock-badge {
+        font-size: 11px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-family: monospace;
+        letter-spacing: 0.5px;
+    }
+    .quick-order-stock-badge.ok   { background: rgba(0,255,136,0.12); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
+    .quick-order-stock-badge.low  { background: rgba(255,180,0,0.12);  color: #ffb400; border: 1px solid rgba(255,180,0,0.3); }
+    .quick-order-stock-badge.out  { background: rgba(255,60,60,0.12);   color: #ff4d6d; border: 1px solid rgba(255,60,60,0.3); }
+
+    /* Quantity stepper */
+    .qty-stepper {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        border: 1px solid rgba(0,243,255,0.25);
+        border-radius: 10px;
+        overflow: hidden;
+        width: fit-content;
+    }
+    .qty-stepper button {
+        background: rgba(0,243,255,0.08);
+        border: none;
+        color: #00f3ff;
+        font-size: 20px;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        transition: background 0.2s;
+        line-height: 1;
+    }
+    .qty-stepper button:hover { background: rgba(0,243,255,0.2); }
+    .qty-stepper input {
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 700;
+        width: 56px;
+        text-align: center;
+        outline: none;
+    }
+
+    /* Order summary row */
+    .quick-order-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(188,19,254,0.06);
+        border: 1px solid rgba(188,19,254,0.2);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-top: 20px;
+    }
+    .summary-label { color: var(--text-secondary); font-size: 13px; }
+    .summary-total {
+        font-size: 24px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #bc13fe, #00f3ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Toast notification */
+    #orderToast {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 9999;
+        background: rgba(10,10,20,0.95);
+        border: 1px solid rgba(0,255,136,0.4);
+        border-radius: 14px;
+        padding: 18px 24px;
+        min-width: 280px;
+        box-shadow: 0 8px 32px rgba(0,255,136,0.15);
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        transform: translateX(120%);
+        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #orderToast.show { transform: translateX(0); }
+    #orderToast.error { border-color: rgba(255,77,109,0.5); box-shadow: 0 8px 32px rgba(255,77,109,0.15); }
+    .toast-icon { font-size: 28px; flex-shrink: 0; }
+    .toast-title { font-size: 14px; font-weight: 700; color: #00ff88; margin-bottom: 3px; }
+    .toast-body  { font-size: 12px; color: var(--text-secondary); }
+    #orderToast.error .toast-title { color: #ff4d6d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{% if user.role == 'customer' %}JK MARKETPLACE{% else %}Inventory Bay{% endif %}</h1>
+    <p>{% if user.role == 'customer' %}Browse our sector's premium catalog{% else %}Product catalog management • {{ products.count }} items in database{% endif %}</p>
+</div>
+
+{# Hidden CSRF form — provides the token for all AJAX requests on this page #}
+<form id="csrf-form" style="display:none;">{% csrf_token %}</form>
+
+<div class="products-controls">
+    <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="Search catalog..." id="productSearch" value="{{ request.GET.search }}">
+    </div>
+    <div class="filter-tags">
+        <a href="{% url 'inventory:inventory_bay' %}" class="filter-tag {% if selected_category == 'all' %}active{% endif %}">All Systems</a>
+        {% for cat_key, cat_name in categories %}
+        <a href="?category={{ cat_key }}" class="filter-tag {% if selected_category == cat_key %}active{% endif %}">{{ cat_name }}</a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="products-3d-grid" id="productsGrid">
+    {% for product in products %}
+    <div class="product-3d-card" data-product-id="{{ product.id }}"
+         data-name="{{ product.name }}" data-price="{{ product.price }}"
+         data-category="{{ product.category }}" data-sku="{{ product.sku }}"
+         data-icon="{{ product.icon }}"
+         data-image-url="{% if product.image %}{{ product.image.url }}{% elif product.image_url %}{{ product.image_url }}{% endif %}">
+        <div class="product-image-container">
+            {% if product.image %}
+            <img src="{{ product.image.url }}" alt="{{ product.name }}"
+                 style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">
+            {% elif product.image_url %}
+            <img src="{{ product.image_url }}" alt="{{ product.name }}"
+                 style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">
+            {% else %}
+            {{ product.icon }}
+            {% endif %}
+        </div>
+        <div class="product-info">
+            {% if product.is_bestseller %}
+            <div style="margin-bottom:6px;">
+                <span style="background:linear-gradient(135deg,#ffb400,#ff6a00);color:#000;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:1px;text-transform:uppercase;">🏆 BESTSELLER</span>
+            </div>
+            {% endif %}
+            <div class="product-meta">
+                <span class="product-category">{{ product.get_category_display }}</span>
+                <span class="product-stock {% if product.is_low_stock %}low{% endif %}">
+                    {{ product.stock }} in stock
+                </span>
+            </div>
+            <div class="product-name">{{ product.name }}</div>
+            <div class="product-sku">SKU: {{ product.sku }}</div>
+            <div class="product-price">₹{{ product.price }}</div>
+            {% with avg=product.get_average_rating count=product.get_review_count %}
+            <div id="rating-{{ product.id }}" style="display:flex;align-items:center;gap:6px;margin:4px 0;font-size:12px;">{% if avg %}<span style="color:#ffb400;">{% for i in "12345" %}{% if forloop.counter <= avg %}★{% else %}☆{% endif %}{% endfor %}</span><span style="color:var(--text-secondary);">{{ avg }} ({{ count }})</span>{% else %}<span style="color:var(--text-secondary);font-size:11px;">No reviews yet</span>{% endif %}</div>
+            {% endwith %}
+            <div class="product-actions">
+                {% if user.role != 'customer' %}
+                <button class="btn-icon" onclick="editProduct('{{ product.id }}')">✏️ Edit</button>
+                <button class="btn-icon" onclick="adjustStock('{{ product.id }}')">📊 Stock</button>
+                <button class="btn-icon" style="color:var(--danger);border-color:rgba(255,59,59,0.3);margin-top:4px;width:100%;justify-content:center;" onclick="deleteProduct('{{ product.id }}','{{ product.name|escapejs }}')">🗑️ Delete</button>
+                {% else %}
+                {% if product.stock > 0 %}
+                <button class="btn btn-primary btn-small"
+                        style="width:100%; justify-content:center;"
+                        onclick="openQuickOrder('{{ product.id }}','{{ product.name|escapejs }}','{{ product.icon }}','{{ product.price }}','{{ product.stock }}','{{ product.sku }}')"
+                        {% if product.stock == 0 %}disabled{% endif %}>
+                    🛒 Order Now
+                </button>
+                {% else %}
+                <button class="btn btn-small" style="width:100%;justify-content:center;opacity:0.5;cursor:not-allowed;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#a0a0b0;" disabled>
+                    🚫 Out of Stock
+                </button>
+                {% endif %}
+                {% endif %}
+                {% if user.role == 'customer' %}
+                <button class="btn btn-small wishlist-toggle-btn"
+                        id="wl-btn-{{ product.id }}"
+                        style="width:100%;justify-content:center;margin-top:6px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);color:#f87171;"
+                        onclick="toggleWishlist({{ product.id }}, this)">
+                    ♡ Wishlist
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="glass-card" style="grid-column: 1 / -1; text-align: center; padding: 60px;">
+        <div style="font-size: 48px; margin-bottom: 20px;">📭</div>
+        <h3>No products found</h3>
+        <p style="color: var(--text-secondary);">Add your first product to get started</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add Product Modal -->
+<div id="addProductModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Add New Product</h3>
+            <button class="modal-close" onclick="closeModal('addProduct')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="addProductForm" method="post" enctype="multipart/form-data" action="{% url 'inventory:add_product' %}">
+                {% csrf_token %}
+                <div class="input-group">
+                    <label>Product Name</label>
+                    <input type="text" name="name" class="input-field" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="input-group">
+                        <label>Price (₹)</label>
+                        <input type="number" name="price" step="0.01" class="input-field" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Stock Quantity</label>
+                        <input type="number" name="stock" class="input-field" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="input-group">
+                        <label>Category</label>
+                        <select name="category" class="input-field">
+                            {% for cat_key, cat_name in categories %}
+                            <option value="{{ cat_key }}">{{ cat_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>SKU Code</label>
+                        <input type="text" name="sku" class="input-field" placeholder="PRD-001" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Icon (used as fallback)</label>
+                    <select name="icon" class="input-field">
+                        <option value="📦">📦 Box</option>
+                        <option value="💻">💻 Laptop</option>
+                        <option value="📱">📱 Phone</option>
+                        <option value="🎧">🎧 Headphones</option>
+                        <option value="⌚">⌚ Watch</option>
+                        <option value="👟">👟 Shoes</option>
+                        <option value="👜">👜 Bag</option>
+                        <option value="🕶️">🕶️ Glasses</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Product Image <span style="color:var(--text-secondary);font-size:11px;">(optional)</span></label>
+                    <label class="img-upload-label" for="addProductImage">
+                        <span class="upload-icon">🖼️</span>
+                        <span>Click to upload or drag & drop</span>
+                        <span style="font-size:11px;opacity:0.6;">PNG, JPG, WEBP • Max 5MB</span>
+                        <input type="file" id="addProductImage" name="image"
+                               accept="image/*" onchange="previewImage(this,'addImgPreview')">
+                    </label>
+                    <img id="addImgPreview" class="img-upload-preview" alt="Preview">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-small" onclick="closeModal('addProduct')">Cancel</button>
+            <button class="btn btn-primary btn-small" onclick="submitProduct()">Add Product</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Product Modal -->
+<div id="editProductModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Product Details</h3>
+            <button class="modal-close" onclick="closeModal('editProduct')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="editProductForm" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="input-group">
+                    <label>Product Name</label>
+                    <input type="text" name="name" class="input-field" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="input-group">
+                        <label>Price (₹)</label>
+                        <input type="number" name="price" step="0.01" class="input-field" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Category</label>
+                        <select name="category" class="input-field">
+                            {% for cat_key, cat_name in categories %}
+                            <option value="{{ cat_key }}">{{ cat_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="input-group">
+                        <label>SKU Code</label>
+                        <input type="text" name="sku" class="input-field" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Icon (fallback)</label>
+                        <select name="icon" class="input-field">
+                            <option value="📦">📦 Box</option>
+                            <option value="💻">💻 Laptop</option>
+                            <option value="📱">📱 Phone</option>
+                            <option value="🎧">🎧 Headphones</option>
+                            <option value="⌚">⌚ Watch</option>
+                            <option value="👟">👟 Shoes</option>
+                            <option value="👜">👜 Bag</option>
+                            <option value="🕶️">🕶️ Glasses</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Product Image <span style="color:var(--text-secondary);font-size:11px;">(leave blank to keep current)</span></label>
+                    <img id="editImgCurrent" class="img-upload-preview" alt="Current image" style="margin-bottom:8px;">
+                    <label class="img-upload-label" for="editProductImage">
+                        <span class="upload-icon">🖼️</span>
+                        <span>Click to upload a new image</span>
+                        <span style="font-size:11px;opacity:0.6;">PNG, JPG, WEBP • Max 5MB</span>
+                        <input type="file" id="editProductImage" name="image"
+                               accept="image/*" onchange="previewImage(this,'editImgPreview')">
+                    </label>
+                    <img id="editImgPreview" class="img-upload-preview" alt="New preview">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-small" onclick="closeModal('editProduct')">Cancel</button>
+            <button class="btn btn-primary btn-small" onclick="submitEditProduct()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Adjustment Modal -->
+<div id="stockModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Adjust Stock Level</h3>
+            <button class="modal-close" onclick="closeModal('stock')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="stockForm" method="post">
+                {% csrf_token %}
+                <div class="input-group">
+                    <label>Current Stock</label>
+                    <input type="number" id="currentStock" class="input-field" readonly>
+                </div>
+                <div class="input-group">
+                    <label>New Stock Level</label>
+                    <input type="number" name="stock" id="newStock" class="input-field" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-small" onclick="closeModal('stock')">Cancel</button>
+            <button class="btn btn-primary btn-small" onclick="submitStock()">Update Stock</button>
+        </div>
+    </div>
+</div>
+
+<!-- AI Recommendations Section (customer only) -->
+{% if user.role == 'customer' and recommended %}
+<div style="margin-top:40px;">
+    <div class="page-header" style="margin-bottom:20px;">
+        <h2 style="font-size:20px;">🤖 AI Picks For You</h2>
+        <p style="font-size:13px;color:var(--text-secondary);">Recommended based on your purchase history</p>
+    </div>
+    <div class="products-3d-grid">
+        {% for product in recommended %}
+        <div class="product-3d-card" style="border:1px solid rgba(188,19,254,0.3);">
+            <div class="product-image-container">
+                {% if product.image %}<img src="{{ product.image.url }}" alt="{{ product.name }}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">{% elif product.image_url %}<img src="{{ product.image_url }}" alt="{{ product.name }}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">{% else %}{{ product.icon }}{% endif %}
+            </div>
+            <div class="product-info">
+                <div style="margin-bottom:4px;"><span style="background:rgba(188,19,254,0.15);color:#bc13fe;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid rgba(188,19,254,0.3);">✨ Recommended</span></div>
+                <div class="product-meta"><span class="product-category">{{ product.get_category_display }}</span></div>
+                <div class="product-name">{{ product.name }}</div>
+                <div class="product-price">₹{{ product.price }}</div>
+                <div class="product-actions">
+                    {% if product.stock > 0 %}
+                    <button class="btn btn-primary btn-small" style="width:100%;justify-content:center;" onclick="openQuickOrder('{{ product.id }}','{{ product.name|escapejs }}','{{ product.icon }}','{{ product.price }}','{{ product.stock }}','{{ product.sku }}')">🛒 Order Now</button>
+                    {% else %}
+                    <button class="btn btn-small" style="width:100%;opacity:0.5;cursor:not-allowed;" disabled>🚫 Out of Stock</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Order Modal -->
+<div id="quickOrderModal" class="modal">
+    <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-header">
+            <h3 class="modal-title">🛒 Quick Order</h3>
+            <button class="modal-close" onclick="closeModal('quickOrder')">✕</button>
+        </div>
+        <div class="modal-body">
+            <!-- Product header -->
+            <div class="quick-order-product-header">
+                <div class="quick-order-icon" id="qo-icon">📦</div>
+                <div class="quick-order-meta">
+                    <div class="quick-order-name" id="qo-name">Product Name</div>
+                    <div class="quick-order-sku"  id="qo-sku">SKU: —</div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="quick-order-price" id="qo-price">₹0.00</div>
+                        <span class="quick-order-stock-badge ok" id="qo-stock-badge">0 in stock</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quantity stepper -->
+            <div style="margin-bottom: 6px;">
+                <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:10px;">Quantity</label>
+                <div class="qty-stepper">
+                    <button type="button" onclick="changeQty(-1)">−</button>
+                    <input type="number" id="qo-qty" value="1" min="1"
+                           oninput="clampQtyInput(this)">
+                    <button type="button" onclick="changeQty(1)">+</button>
+                </div>
+                <!-- Stock error message — shown when qty exceeds available stock -->
+                <div id="qo-stock-error" style="display:none;margin-top:10px;padding:10px 14px;
+                     background:rgba(255,60,60,0.10);border:1px solid rgba(255,77,109,0.5);
+                     border-radius:8px;font-size:12px;color:#ff4d6d;display:none;
+                     align-items:center;gap:8px;">
+                    <span style="font-size:16px;">🚫</span>
+                    <span id="qo-stock-error-msg">Quantity exceeds available stock.</span>
+                </div>
+            </div>
+
+            <!-- Coupon Code -->
+            <div style="margin:16px 0 0;">
+                <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:8px;">Coupon Code <span style="font-size:11px;opacity:0.6;">(optional)</span></label>
+                {% if available_coupons %}
+                <div style="margin-bottom:8px;">
+                    <select id="qo-coupon-select" class="input-field" onchange="selectCouponFromDropdown(this.value)" style="width:100%;background:var(--card-bg);color:var(--text-primary);border:1px solid rgba(0,243,255,0.2);border-radius:8px;padding:8px 12px;font-size:13px;">
+                        <option value="">— Select a coupon (or type below) —</option>
+                        {% for c in available_coupons %}
+                        <option value="{{ c.code }}">{{ c.code }} — {% if c.discount_type == 'percentage' %}{{ c.discount_value }}% off{% else %}₹{{ c.discount_value }} off{% endif %}{% if c.min_order_amount > 0 %} (min ₹{{ c.min_order_amount }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <div style="display:flex;gap:8px;">
+                    <input type="text" id="qo-coupon-input" class="input-field" placeholder="Enter coupon code" style="flex:1;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                    <button type="button" onclick="applyCoupon()" class="btn btn-secondary btn-small" style="white-space:nowrap;">Apply</button>
+                </div>
+                <div id="qo-coupon-msg" style="font-size:12px;margin-top:6px;display:none;"></div>
+            </div>
+
+            <!-- Order summary -->
+            <div class="quick-order-summary">
+                <div>
+                    <div class="summary-label">Order Total</div>
+                    <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;" id="qo-summary-detail">1 × ₹0.00</div>
+                    <div style="font-size:11px;color:#00ff88;margin-top:2px;display:none;" id="qo-discount-row">💚 Discount: -₹<span id="qo-discount-amt">0.00</span></div>
+                    <div style="font-size:11px;color:#7eb8f7;margin-top:2px;" id="qo-shipping-row">🚚 Shipping: <span id="qo-shipping-amt">calculating...</span></div>
+                    <div style="font-size:10px;color:var(--text-secondary);margin-top:3px;" id="qo-delivery-row">📅 <span id="qo-delivery-days"></span></div>
+                </div>
+                <div>
+                    <div class="summary-total" id="qo-total">₹0.00</div>
+                    <div style="font-size:11px;color:var(--text-secondary);text-decoration:line-through;text-align:right;display:none;" id="qo-original-total"></div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="flex-direction:column;gap:12px;align-items:stretch;">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text-secondary);padding:10px;background:rgba(82,143,240,0.06);border:1px solid rgba(82,143,240,0.2);border-radius:10px;">
+                <input type="checkbox" id="qo-use-razorpay" style="accent-color:#528FF0;width:16px;height:16px;">
+                <span>📱 Pay via <span style="color:#528FF0;font-weight:700;">Razorpay QR</span> (scan &amp; pay UPI)</span>
+            </label>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-secondary btn-small" onclick="closeModal('quickOrder')">Cancel</button>
+                <button class="btn btn-primary btn-small" id="qo-submit-btn" onclick="submitQuickOrder()" style="flex:1;justify-content:center;">
+                    ⚡ Place Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Review Modal -->
+<div id="reviewModal" class="modal">
+    <div class="modal-content" style="max-width:460px;">
+        <div class="modal-header">
+            <h3 class="modal-title">⭐ Write a Review</h3>
+            <button class="modal-close" onclick="closeModal('review')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="reviewForm" method="post">
+                {% csrf_token %}
+                <div id="review-product-name" style="font-size:16px;font-weight:700;margin-bottom:16px;color:#fff;"></div>
+                <div class="input-group">
+                    <label>Rating</label>
+                    <div id="star-selector" style="display:flex;gap:8px;font-size:32px;cursor:pointer;margin-top:4px;">
+                        <span data-val="1" onclick="setRating(1)">☆</span>
+                        <span data-val="2" onclick="setRating(2)">☆</span>
+                        <span data-val="3" onclick="setRating(3)">☆</span>
+                        <span data-val="4" onclick="setRating(4)">☆</span>
+                        <span data-val="5" onclick="setRating(5)">☆</span>
+                    </div>
+                    <input type="hidden" id="review-rating" name="rating" value="">
+                </div>
+                <div class="input-group">
+                    <label>Title <span style="font-size:11px;opacity:0.6;">(optional)</span></label>
+                    <input type="text" name="title" class="input-field" placeholder="Summary of your experience">
+                </div>
+                <div class="input-group">
+                    <label>Review</label>
+                    <textarea name="body" class="input-field" rows="4" placeholder="Share your experience with this product..." required style="resize:vertical;"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-small" onclick="closeModal('review')">Cancel</button>
+            <button class="btn btn-primary btn-small" onclick="submitReview()">Submit Review</button>
+        </div>
+    </div>
+</div>
+
+<!-- Razorpay QR Payment Modal -->
+<div id="razorpayModal" class="modal">
+    <div class="modal-content" style="max-width:400px;text-align:center;">
+        <div class="modal-header">
+            <h3 class="modal-title">📱 Pay via Razorpay QR</h3>
+            <button class="modal-close" onclick="closeModal('razorpay')">✕</button>
+        </div>
+        <div class="modal-body" style="text-align:center;">
+            <div style="background:rgba(0,243,255,0.06);border:1px solid rgba(0,243,255,0.2);border-radius:14px;padding:24px;">
+                <div style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;">Scan to pay with any UPI app</div>
+                <!-- Razorpay QR code SVG placeholder - replace with your actual Razorpay QR image -->
+                <div style="background:#fff;border-radius:12px;padding:16px;display:inline-block;margin-bottom:16px;">
+                    <svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+                        <!-- QR Code pattern - Replace this with your actual Razorpay QR image tag -->
+                        <rect width="180" height="180" fill="white"/>
+                        <text x="90" y="75" text-anchor="middle" font-size="12" fill="#333">Scan QR Code</text>
+                        <text x="90" y="95" text-anchor="middle" font-size="10" fill="#666">Replace with your</text>
+                        <text x="90" y="110" text-anchor="middle" font-size="10" fill="#666">Razorpay QR image</text>
+                        <!-- QR border markers -->
+                        <rect x="20" y="20" width="40" height="40" fill="none" stroke="#333" stroke-width="4"/>
+                        <rect x="25" y="25" width="28" height="28" fill="#333"/>
+                        <rect x="120" y="20" width="40" height="40" fill="none" stroke="#333" stroke-width="4"/>
+                        <rect x="125" y="25" width="28" height="28" fill="#333"/>
+                        <rect x="20" y="120" width="40" height="40" fill="none" stroke="#333" stroke-width="4"/>
+                        <rect x="25" y="125" width="28" height="28" fill="#333"/>
+                        <rect x="70" y="20" width="8" height="8" fill="#333"/>
+                        <rect x="82" y="20" width="8" height="8" fill="#333"/>
+                        <rect x="70" y="32" width="8" height="8" fill="#333"/>
+                        <rect x="94" y="32" width="8" height="8" fill="#333"/>
+                        <rect x="70" y="44" width="8" height="8" fill="#333"/>
+                        <rect x="82" y="44" width="8" height="8" fill="#333"/>
+                    </svg>
+                </div>
+                <div id="razorpay-amount" style="font-size:28px;font-weight:800;background:linear-gradient(135deg,#00f3ff,#bc13fe);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;">₹0.00</div>
+                <div style="font-size:13px;color:var(--text-secondary);">Powered by <span style="color:#528FF0;font-weight:700;">Razorpay</span></div>
+                <div style="margin-top:16px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                    Supports PhonePe • GPay • Paytm • BHIM • All UPI Apps
+                </div>
+            </div>
+            <div style="margin-top:16px;padding:12px;background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.2);border-radius:10px;font-size:12px;color:#ffb400;">
+                ⚠️ After payment, click "Confirm Payment" to place your order
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-small" onclick="closeModal('razorpay')">Cancel</button>
+            <button class="btn btn-primary btn-small" id="razorpay-confirm-btn" onclick="confirmRazorpayOrder()">✅ Confirm Payment</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ─── Quick Order ───────────────────────────────────────────────
+let qoProductId   = null;
+let qoProductPrice = 0;
+let qoMaxStock    = 0;
+let qoShippingCharge = 0;
+let qoDeliveryDays = '';
+
+function getShippingTier(afterDiscount) {
+    // Mirror server-side tiers: free ≥2000, ₹49 ≥1000, ₹79 ≥500, ₹99 <500
+    if (afterDiscount >= 2000) return { charge: 0,  days: '1–3 business days (FREE shipping)' };
+    if (afterDiscount >= 1000) return { charge: 49, days: '2–4 business days' };
+    if (afterDiscount >= 500)  return { charge: 79, days: '3–5 business days' };
+    return                             { charge: 99, days: '4–7 business days' };
+}
+
+function openQuickOrder(id, name, icon, price, stock, sku) {
+    qoProductId    = id;
+    qoProductPrice = parseFloat(price);
+    qoMaxStock     = parseInt(stock);
+
+    document.getElementById('qo-icon').textContent  = icon;
+    document.getElementById('qo-name').textContent  = name;
+    document.getElementById('qo-sku').textContent   = 'SKU: ' + sku;
+    document.getElementById('qo-price').textContent = '₹' + parseFloat(price).toFixed(2);
+
+    // Stock badge
+    const badge = document.getElementById('qo-stock-badge');
+    badge.textContent = stock + ' in stock';
+    badge.className   = 'quick-order-stock-badge ' + (stock >= 10 ? 'ok' : 'low');
+
+    // Reset qty
+    const qtyInput = document.getElementById('qo-qty');
+    qtyInput.value = 1;
+    qtyInput.max   = stock;
+    qtyInput.style.borderColor = '';
+    qtyInput.style.color = '';
+
+    // Reset stock error
+    const errBox = document.getElementById('qo-stock-error');
+    if (errBox) errBox.style.display = 'none';
+    const submitBtn = document.getElementById('qo-submit-btn');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.style.opacity = ''; submitBtn.style.cursor = ''; }
+
+    // Reset coupon
+    appliedCouponCode = null;
+    appliedDiscount = 0;
+    qoShippingCharge = 0;
+    qoDeliveryDays = '';
+    const couponInput = document.getElementById('qo-coupon-input');
+    const couponMsg = document.getElementById('qo-coupon-msg');
+    const couponSelect = document.getElementById('qo-coupon-select');
+    if (couponInput) couponInput.value = '';
+    if (couponMsg) couponMsg.style.display = 'none';
+    if (couponSelect) couponSelect.value = '';
+    const razorpayBox = document.getElementById('qo-use-razorpay');
+    if (razorpayBox) razorpayBox.checked = false;
+
+    updateSummary();
+    openModal('quickOrder');
+}
+
+function changeQty(delta) {
+    const input = document.getElementById('qo-qty');
+    let val = parseInt(input.value);
+    if (isNaN(val)) val = 1;
+    val = Math.max(1, Math.min(val + delta, qoMaxStock));
+    input.value = val;
+    updateSummary();
+}
+
+function clampQtyInput(input) {
+    let val = parseInt(input.value);
+    const errBox = document.getElementById('qo-stock-error');
+    const errMsg = document.getElementById('qo-stock-error-msg');
+    const submitBtn = document.getElementById('qo-submit-btn');
+
+    if (isNaN(val) || val < 1) {
+        // Invalid / empty — reset to 1, clear error
+        input.value = 1;
+        val = 1;
+    }
+
+    if (val > qoMaxStock) {
+        // OUT OF RANGE — show error, disable submit button
+        errMsg.textContent = `Only ${qoMaxStock} unit(s) available in stock. Please enter a quantity of 1–${qoMaxStock}.`;
+        errBox.style.display = 'flex';
+        input.style.borderColor = 'rgba(255,77,109,0.7)';
+        input.style.color = '#ff4d6d';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.4';
+            submitBtn.style.cursor = 'not-allowed';
+        }
+    } else {
+        // Valid — hide error, enable submit
+        errBox.style.display = 'none';
+        input.style.borderColor = '';
+        input.style.color = '';
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '';
+            submitBtn.style.cursor = '';
+        }
+    }
+    updateSummary();
+}
+
+function updateSummary() {
+    const qty = parseInt(document.getElementById('qo-qty').value) || 0;
+    const subtotal = qty * qoProductPrice;
+    const discount = appliedDiscount || 0;
+    const afterDiscount = subtotal - discount;
+
+    // Compute shipping live (mirrors server tiers)
+    const shipping = getShippingTier(afterDiscount);
+    qoShippingCharge = shipping.charge;
+    qoDeliveryDays   = shipping.days;
+
+    const final = (afterDiscount + shipping.charge).toFixed(2);
+
+    document.getElementById('qo-total').textContent = '₹' + final;
+    document.getElementById('qo-summary-detail').textContent = qty + ' × ₹' + qoProductPrice.toFixed(2);
+
+    // Discount row
+    const discountRow = document.getElementById('qo-discount-row');
+    const origTotal = document.getElementById('qo-original-total');
+    if (discount > 0) {
+        discountRow.style.display = 'block';
+        document.getElementById('qo-discount-amt').textContent = discount.toFixed(2);
+        origTotal.style.display = 'block';
+        origTotal.textContent = '₹' + subtotal.toFixed(2);
+    } else {
+        discountRow.style.display = 'none';
+        origTotal.style.display = 'none';
+    }
+
+    // Shipping row
+    const shippingAmtEl  = document.getElementById('qo-shipping-amt');
+    const deliveryDaysEl = document.getElementById('qo-delivery-days');
+    if (shippingAmtEl) {
+        shippingAmtEl.textContent = shipping.charge === 0 ? 'FREE 🎉' : '₹' + shipping.charge.toFixed(2);
+        shippingAmtEl.style.color = shipping.charge === 0 ? '#00ff88' : '#7eb8f7';
+    }
+    if (deliveryDaysEl) {
+        deliveryDaysEl.textContent = shipping.days;
+    }
+}
+
+function submitQuickOrder() {
+    const input = document.getElementById('qo-qty');
+    let qty = parseInt(input.value);
+
+    // Front-end guard: reject invalid quantities immediately
+    if (isNaN(qty) || qty < 1) {
+        input.value = 1;
+        showNexusToast('Please enter a quantity of at least 1.', 'warning', 'Invalid Quantity');
+        return;
+    }
+    if (qty > qoMaxStock) {
+        // Hard block — do not place order, force user to fix quantity
+        const errBox = document.getElementById('qo-stock-error');
+        const errMsg = document.getElementById('qo-stock-error-msg');
+        const qtyInput = document.getElementById('qo-qty');
+        errMsg.textContent = `Only ${qoMaxStock} unit(s) available. Please enter a valid quantity (1–${qoMaxStock}).`;
+        errBox.style.display = 'flex';
+        qtyInput.style.borderColor = 'rgba(255,77,109,0.7)';
+        qtyInput.style.color = '#ff4d6d';
+        showNexusToast(`No stock! Only ${qoMaxStock} unit(s) available. Correct the quantity to place order.`, 'error', 'Out of Stock');
+        return;
+    }
+    if (!qoProductId) return;
+
+    // Show Razorpay QR option
+    const useRazorpay = document.getElementById('qo-use-razorpay') && document.getElementById('qo-use-razorpay').checked;
+    if (useRazorpay) {
+        closeModal('quickOrder');
+        openRazorpayModal(qoProductId, qty, appliedCouponCode);
+        return;
+    }
+
+    const btn = document.getElementById('qo-submit-btn');
+    btn.disabled   = true;
+    btn.textContent = '⏳ Placing...';
+
+    const formData = new FormData();
+    formData.append('product_ids[]', qoProductId);
+    formData.append('quantities[]',  qty);
+    formData.append('sector', '{{ request.user.sector|default:"Sector 1" }}');
+    if (appliedCouponCode) formData.append('coupon_code', appliedCouponCode);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+    fetch('{% url "orders:create_order" %}', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        closeModal('quickOrder');
+        btn.disabled    = false;
+        btn.textContent = '⚡ Place Order';
+        if (data.success) {
+            let msg = 'Order ' + data.order_id + ' • ₹' + data.total + ' is being processed.';
+            if (data.coupon_applied) msg += ' (Coupon: ' + data.coupon_applied + ')';
+            showNexusToast(msg, 'success', 'Order Placed!');
+            appliedCouponCode = null;
+            appliedDiscount = 0;
+            setTimeout(() => location.reload(), 2500);
+        } else {
+            showNexusToast(data.error || 'Something went wrong.', 'error', 'Order Failed');
+        }
+    })
+    .catch(() => {
+        closeModal('quickOrder');
+        btn.disabled    = false;
+        btn.textContent = '⚡ Place Order';
+        showNexusToast('Could not reach the server.', 'error', 'Network Error');
+    });
+}
+
+// ─── Coupon ────────────────────────────────────────────────────
+let appliedCouponCode = null;
+
+function selectCouponFromDropdown(code) {
+    const input = document.getElementById('qo-coupon-input');
+    if (input) { input.value = code; }
+    if (code) applyCoupon();
+}
+let appliedDiscount = 0;
+
+function applyCoupon() {
+    const code = document.getElementById('qo-coupon-input').value.trim().toUpperCase();
+    const msgEl = document.getElementById('qo-coupon-msg');
+    if (!code) {
+        msgEl.style.display = 'none';
+        appliedCouponCode = null;
+        appliedDiscount = 0;
+        updateSummary();
+        return;
+    }
+    const qty = parseInt(document.getElementById('qo-qty').value) || 1;
+    const orderTotal = qty * qoProductPrice;
+
+    // Get CSRF from cookie - always works regardless of DOM state
+    function getCsrfCookie() {
+        const name = 'csrftoken';
+        for (let c of document.cookie.split(';')) {
+            c = c.trim();
+            if (c.startsWith(name + '=')) return decodeURIComponent(c.slice(name.length + 1));
+        }
+        return '';
+    }
+
+    fetch('{% url "orders:validate_coupon" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfCookie(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ code: code, order_total: orderTotal })
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('Server error: ' + r.status);
+        return r.json();
+    })
+    .then(data => {
+        msgEl.style.display = 'block';
+        if (data.success) {
+            appliedCouponCode = code;
+            appliedDiscount = data.discount_amount;
+            // Use server-authoritative shipping values when coupon is applied
+            if (data.shipping_charge !== undefined) {
+                qoShippingCharge = data.shipping_charge;
+                qoDeliveryDays   = data.delivery_days || '';
+            }
+            msgEl.style.color = '#00ff88';
+            msgEl.textContent = '✅ ' + data.message;
+            updateSummary();
+        } else {
+            appliedCouponCode = null;
+            appliedDiscount = 0;
+            msgEl.style.color = '#ff4d6d';
+            msgEl.textContent = '❌ ' + data.error;
+            updateSummary();
+        }
+    })
+    .catch((err) => {
+        console.error('Coupon validation error:', err);
+        msgEl.style.display = 'block';
+        msgEl.style.color = '#ff4d6d';
+        msgEl.textContent = '❌ Could not validate coupon. Please try again.';
+    });
+}
+
+// ─── Review ────────────────────────────────────────────────────
+let reviewProductId = null;
+let selectedRating = 0;
+
+function openReviewModal(productId, productName) {
+    reviewProductId = productId;
+    selectedRating = 0;
+    document.getElementById('review-product-name').textContent = productName;
+    document.getElementById('review-rating').value = '';
+    setRating(0);
+    document.getElementById('reviewForm').reset();
+    openModal('review');
+}
+
+function setRating(val) {
+    selectedRating = val;
+    document.getElementById('review-rating').value = val;
+    const stars = document.querySelectorAll('#star-selector span');
+    stars.forEach((s, i) => {
+        s.textContent = i < val ? '★' : '☆';
+        s.style.color = i < val ? '#ffb400' : 'var(--text-secondary)';
+    });
+}
+
+function getCsrfToken() {
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+        c = c.trim();
+        if (c.startsWith(name + '=')) return decodeURIComponent(c.substring(name.length + 1));
+    }
+    return '';
+}
+
+function submitReview() {
+    if (!selectedRating) {
+        showNexusToast('Please select a star rating.', 'warning', 'Rating Required');
+        return;
+    }
+    const body = document.querySelector('#reviewForm textarea[name="body"]').value.trim();
+    const title = document.querySelector('#reviewForm input[name="title"]').value.trim();
+    if (!body) { showNexusToast('Please write your review.', 'warning', 'Required'); return; }
+
+    const formData = new FormData();
+    formData.append('rating', selectedRating);
+    formData.append('title', title);
+    formData.append('body', body);
+    formData.append('csrfmiddlewaretoken', getCsrfToken());
+
+    fetch(`/dashboard/product/${reviewProductId}/review/`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            closeModal('review');
+            showNexusToast(data.message, 'success', 'Review Submitted!');
+            // Update stars on product card live - no reload needed
+            const ratingDiv = document.getElementById('rating-' + reviewProductId);
+            if (ratingDiv && data.new_avg) {
+                const avg = parseFloat(data.new_avg);
+                const count = data.review_count;
+                let stars = '';
+                for (let i = 1; i <= 5; i++) stars += i <= Math.round(avg) ? '★' : '☆';
+                ratingDiv.innerHTML = `<span style="color:#ffb400;">${stars}</span><span style="color:var(--text-secondary);">${avg.toFixed(1)} (${count})</span>`;
+            }
+        } else {
+            showNexusToast(data.error || 'Could not submit review.', 'error', 'Error');
+        }
+    })
+    .catch(() => showNexusToast('Network error.', 'error', 'Error'));
+}
+
+// ─── Razorpay QR ───────────────────────────────────────────────
+let razorpayPendingOrder = null;
+
+function openRazorpayModal(productId, qty, couponCode) {
+    const total = (qty * qoProductPrice - (appliedDiscount || 0)).toFixed(2);
+    document.getElementById('razorpay-amount').textContent = '₹' + total;
+    razorpayPendingOrder = { productId, qty, couponCode };
+    openModal('razorpay');
+}
+
+function confirmRazorpayOrder() {
+    if (!razorpayPendingOrder) return;
+    const btn = document.getElementById('razorpay-confirm-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Processing...';
+
+    const formData = new FormData();
+    formData.append('product_ids[]', razorpayPendingOrder.productId);
+    formData.append('quantities[]', razorpayPendingOrder.qty);
+    formData.append('sector', '{{ request.user.sector|default:"Sector 1" }}');
+    if (razorpayPendingOrder.couponCode) {
+        formData.append('coupon_code', razorpayPendingOrder.couponCode);
+    }
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+    fetch('{% url "orders:create_order" %}', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        closeModal('razorpay');
+        btn.disabled = false;
+        btn.textContent = '✅ Confirm Payment';
+        if (data.success) {
+            showNexusToast('Order ' + data.order_id + ' placed via Razorpay QR! Total: ₹' + data.total, 'success', 'Payment Confirmed!');
+            setTimeout(() => location.reload(), 2500);
+        } else {
+            showNexusToast(data.error || 'Order failed.', 'error', 'Order Failed');
+        }
+    })
+    .catch(() => {
+        closeModal('razorpay');
+        btn.disabled = false;
+        btn.textContent = '✅ Confirm Payment';
+        showNexusToast('Network error.', 'error', 'Error');
+    });
+}
+
+// showToast → delegates to the global Nexus toast system (base.html)
+function showToast(icon, title, body, isError) {
+    showNexusToast(body, isError ? 'error' : 'success', title);
+}
+
+// Live image preview for upload fields
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+// ────────────────────────────────────────────────────────────────
+let currentProductId = null;
+
+function openModal(modalName) {
+    document.getElementById(modalName + 'Modal').classList.add('active');
+}
+
+function closeModal(modalName) {
+    document.getElementById(modalName + 'Modal').classList.remove('active');
+}
+
+function submitProduct() {
+    const form = document.getElementById('addProductForm');
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error adding product');
+        }
+    });
+}
+
+function editProduct(productId) {
+    currentProductId = productId;
+    const card  = document.querySelector(`[data-product-id="${productId}"]`);
+    const modal = document.getElementById('editProductModal');
+
+    modal.querySelector('[name="name"]').value     = card.dataset.name;
+    modal.querySelector('[name="price"]').value    = card.dataset.price;
+    modal.querySelector('[name="category"]').value = card.dataset.category;
+    modal.querySelector('[name="sku"]').value      = card.dataset.sku;
+    modal.querySelector('[name="icon"]').value     = card.dataset.icon;
+
+    // Show current image if one exists
+    const currentImg = document.getElementById('editImgCurrent');
+    if (card.dataset.imageUrl) {
+        currentImg.src   = card.dataset.imageUrl;
+        currentImg.style.display = 'block';
+    } else {
+        currentImg.src   = '';
+        currentImg.style.display = 'none';
+    }
+    // Clear any previously-selected new file
+    document.getElementById('editProductImage').value = '';
+    const newPreview = document.getElementById('editImgPreview');
+    newPreview.src = ''; newPreview.style.display = 'none';
+
+    document.getElementById('editProductForm').action = `/dashboard/product/${productId}/edit/`;
+    openModal('editProduct');
+}
+
+function submitEditProduct() {
+    const form = document.getElementById('editProductForm');
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error updating product');
+        }
+    });
+}
+
+function adjustStock(productId) {
+    currentProductId = productId;
+    const card = document.querySelector(`[data-product-id="${productId}"]`);
+    const currentStock = card.querySelector('.product-stock').textContent.match(/\d+/)[0];
+    document.getElementById('currentStock').value = currentStock;
+    document.getElementById('newStock').value = currentStock;
+    document.getElementById('stockForm').action = `/dashboard/product/${productId}/stock/`;
+    openModal('stock');
+}
+
+function submitStock() {
+    const form = document.getElementById('stockForm');
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+// Search functionality
+document.getElementById('productSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const cards = document.querySelectorAll('.product-3d-card');
+    
+    cards.forEach(card => {
+        const name = card.querySelector('.product-name').textContent.toLowerCase();
+        const sku = card.querySelector('.product-sku').textContent.toLowerCase();
+        
+        if (name.includes(searchTerm) || sku.includes(searchTerm)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+});
+
+// Close modal on outside click
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.classList.remove('active');
+    }
+}
+
+// Reflect stars from reviews submitted on orbital orders page
+document.addEventListener('DOMContentLoaded', function() {
+    const keys = Object.keys(sessionStorage).filter(k => k.startsWith('reviewedProduct_'));
+    keys.forEach(key => {
+        const productId = key.replace('reviewedProduct_', '');
+        try {
+            const data = JSON.parse(sessionStorage.getItem(key));
+            const ratingDiv = document.getElementById('rating-' + productId);
+            if (ratingDiv && data.avg) {
+                const avg = parseFloat(data.avg);
+                let stars = '';
+                for (let i = 1; i <= 5; i++) stars += i <= Math.round(avg) ? '★' : '☆';
+                ratingDiv.innerHTML = `<span style="color:#ffb400;">${stars}</span><span style="color:var(--text-secondary);">${avg.toFixed(1)} (${data.count})</span>`;
+            }
+            sessionStorage.removeItem(key);
+        } catch(e) {}
+    });
+});
+
+// ─── Delete Product ────────────────────────────────────────────
+function deleteProduct(productId, productName) {
+    Swal.fire({
+        title: 'Delete Product?',
+        html: `Are you sure you want to delete <strong>${productName}</strong>?<br><span style="font-size:13px;color:#aaa;">This action cannot be undone.</span>`,
+        icon: 'warning',
+        background: '#1a1a2e',
+        color: '#e0e0ff',
+        showCancelButton: true,
+        confirmButtonColor: '#ff3b3b',
+        cancelButtonColor: '#444',
+        confirmButtonText: 'Yes, Delete',
+        cancelButtonText: 'Cancel',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/dashboard/product/${productId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showNexusToast('Product deleted successfully.', 'success', 'Deleted!');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    showNexusToast(data.error || 'Could not delete product.', 'error', 'Error');
+                }
+            })
+            .catch(() => showNexusToast('Network error.', 'error', 'Error'));
+        }
+    });
+}
+
+function toggleWishlist(productId, btn) {
+    var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrf) { console.error('No CSRF token'); return; }
+    fetch('/dashboard/wishlist/toggle/' + productId + '/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrf.value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            if (data.wishlisted) {
+                btn.innerHTML = '\u2764\ufe0f Wishlisted';
+                btn.style.background = 'rgba(239,68,68,0.2)';
+                btn.style.borderColor = 'rgba(239,68,68,0.5)';
+                showNexusToast('Added to wishlist!', 'success', 'Wishlist');
+            } else {
+                btn.innerHTML = '\u2661 Wishlist';
+                btn.style.background = 'rgba(239,68,68,0.08)';
+                btn.style.borderColor = 'rgba(239,68,68,0.25)';
+                showNexusToast('Removed from wishlist', 'info', 'Wishlist');
+            }
+        } else {
+            showNexusToast('Could not update wishlist.', 'error', 'Error');
+        }
+    })
+    .catch(function(err) { console.error(err); showNexusToast('Network error.', 'error', 'Error'); });
+}
+</script>
+{% endblock %}

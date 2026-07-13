@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ops Command | JK Login{% endblock %}
+
+{% block dashboard_ui %}{% endblock %}
+{% block container_class %}{% endblock %}
+
+{% block auth_content %}
+<div class="auth-page admin-auth">
+    <div class="auth-container">
+        <div class="auth-visual ops-visual">
+            <div class="scanline"></div>
+            <div class="visual-content">
+                <div style="font-size: 80px; margin-bottom: 20px; filter: drop-shadow(0 0 10px var(--neon-purple));">🛰️</div>
+                <h2 style="font-size: 32px; margin-bottom: 10px; letter-spacing: 2px;">OPS COMMAND</h2>
+                <p style="color: var(--neon-purple); font-family: monospace; font-size: 12px;">AUTHORIZED PERSONNEL ONLY</p>
+                <div class="system-status">
+                    <div class="status-dot"></div>
+                    <span>TERMINAL ACTIVE</span>
+                </div>
+            </div>
+        </div>
+        <div class="auth-form-section">
+            <div style="margin-bottom: 40px;">
+                <h2 style="font-size: 28px; margin-bottom: 10px; color: var(--neon-purple);">Station Login</h2>
+                <p style="color: var(--text-secondary);">Initialize secure connection to JK Core</p>
+            </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                <div class="error-message show" style="margin-bottom: 20px;">
+                    <span>⚠️</span>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if form.errors %}
+            <div class="error-message show" style="margin-bottom: 20px;">
+                <span>🚫</span>
+                <span>Invalid credentials. ACCESS DENIED.</span>
+            </div>
+            {% endif %}
+            
+            <form method="post" action="{% url 'accounts:admin_login' %}">
+                {% csrf_token %}
+                <div class="input-group">
+                    <label>Command Identifier</label>
+                    {{ form.username }}
+                </div>
+                <div class="input-group">
+                    <label>Security Key</label>
+                    {{ form.password }}
+                </div>
+                
+                <button type="submit" class="glow-btn admin-btn">Establish Link</button>
+                <input type="hidden" name="next" value="{{ next }}">
+            </form>
+            
+            <p style="text-align: center; margin-top: 30px; color: var(--text-secondary); font-size: 14px;">
+                New staff? <a href="{% url 'accounts:admin_register' %}" style="color: var(--neon-purple); text-decoration: none;">Staff Enrollment →</a>
+            </p>
+            <p style="text-align: center; margin-top: 10px; color: var(--text-secondary); font-size: 12px; opacity: 0.8;">
+                Regular user? <a href="{% url 'accounts:register' %}" style="color: var(--neon-purple); text-decoration: none;">Citizen Registration</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .admin-auth .auth-container {
+        border-color: var(--neon-purple);
+        box-shadow: 0 0 20px rgba(188, 19, 254, 0.2);
+    }
+    .ops-visual {
+        background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%) !important;
+        position: relative;
+        overflow: hidden;
+    }
+    .scanline {
+        width: 100%;
+        height: 100px;
+        z-index: 10;
+        background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(188, 19, 254, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
+        opacity: 0.1;
+        position: absolute;
+        bottom: 100%;
+        animation: scanline 4s linear infinite;
+    }
+    @keyframes scanline {
+        0% { bottom: 100%; }
+        100% { bottom: -100px; }
+    }
+    .system-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+        font-size: 11px;
+        color: #00ff66;
+        letter-spacing: 1px;
+    }
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        background: #00ff66;
+        border-radius: 50%;
+        box-shadow: 0 0 5px #00ff66;
+        animation: blink 1.5s infinite;
+    }
+    @keyframes blink {
+        0% { opacity: 0; }
+        50% { opacity: 1; }
+        100% { opacity: 0; }
+    }
+    .admin-btn {
+        background: linear-gradient(90deg, #bc13fe, #7a00ff) !important;
+        box-shadow: 0 0 15px rgba(188, 19, 254, 0.4) !important;
+    }
+</style>
+{% endblock %}

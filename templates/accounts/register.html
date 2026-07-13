@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Citizen Enrollment | JK MARKETPLACE{% endblock %}
+
+{% block dashboard_ui %}{% endblock %}
+{% block container_class %}{% endblock %}
+
+{% block auth_content %}
+<div class="auth-page">
+    <div class="auth-container">
+        <div class="auth-visual">
+            <div class="floating-shapes">
+                <div class="shape shape-1"></div>
+                <div class="shape shape-2"></div>
+                <div class="shape shape-3"></div>
+            </div>
+            <div class="visual-content">
+                <div style="font-size: 80px; margin-bottom: 20px;">🎒</div>
+                <h2 style="font-size: 32px; margin-bottom: 10px;">Marketplace</h2>
+                <p style="color: rgba(255,255,255,0.7);">Citizen Enrollment Portal</p>
+            </div>
+        </div>
+        <div class="auth-form-section">
+            <div style="margin-bottom: 40px;">
+                <h2 style="font-size: 28px; margin-bottom: 10px; color: var(--neon-blue);">Join the Sector</h2>
+                <p style="color: var(--text-secondary);">Register your ID to access the premium catalog</p>
+            </div>
+            
+            {% if form.errors %}
+            <div class="error-message show" style="margin-bottom: 20px; color: #ff4d4d;">
+                <span>⚠️</span>
+                <span>Please correct the errors below:</span>
+                <ul>
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <form method="post" action="{% url 'accounts:register' %}">
+                {% csrf_token %}
+                <div class="input-group">
+                    <label>Username</label>
+                    {{ form.username }}
+
+                    <!-- Live constraint checklist -->
+                    <div id="username-constraints" style="margin-top: 8px; font-size: 12px; display: none;">
+                        <div id="rule-length"   class="constraint-rule">✗ &nbsp;At least 3 characters (max 15)</div>
+                        <div id="rule-upper"    class="constraint-rule">✗ &nbsp;At least 1 uppercase letter (A–Z)</div>
+                        <div id="rule-chars"    class="constraint-rule">✗ &nbsp;Letters, numbers, underscores only</div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Email Address</label>
+                    {{ form.email }}
+                </div>
+                <div class="input-group">
+                    <label>Sector / Location</label>
+                    {{ form.sector }}
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    {{ form.password1 }}
+                    <!-- Live password constraint checklist -->
+                    <div id="password-constraints" style="margin-top: 8px; font-size: 12px; display: none;">
+                        <div id="pw-length"  class="constraint-rule">✗ &nbsp;At least 8 characters</div>
+                        <div id="pw-upper"   class="constraint-rule">✗ &nbsp;At least 1 uppercase letter (A–Z)</div>
+                        <div id="pw-number"  class="constraint-rule">✗ &nbsp;At least 1 number (0–9)</div>
+                        <div id="pw-chars"   class="constraint-rule">✗ &nbsp;Only letters, numbers, _ and @ allowed</div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Confirm Password</label>
+                    {{ form.password2 }}
+                </div>
+                <button type="submit" class="glow-btn">Initialize Account</button>
+            </form>
+            
+            <p style="text-align: center; margin-top: 30px; color: var(--text-secondary); font-size: 14px;">
+                Already have access? <a href="{% url 'accounts:login' %}" style="color: var(--neon-blue); text-decoration: none;">Sign In</a>
+            </p>
+            <p style="text-align: center; margin-top: 10px; color: var(--text-secondary); font-size: 12px; opacity: 0.6;">
+                Operations Staff? <a href="{% url 'accounts:admin_register' %}" style="color: var(--text-secondary); text-decoration: underline;">Access Command Portal</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+  .constraint-rule {
+    padding: 3px 0;
+    color: #ff6b6b;          /* red = not yet met */
+    transition: color 0.25s ease;
+  }
+  .constraint-rule.valid {
+    color: #39ff14;           /* neon green = met */
+  }
+</style>
+
+<script>
+(function () {
+  const input       = document.getElementById('id_username');
+  const box         = document.getElementById('username-constraints');
+  const ruleLength  = document.getElementById('rule-length');
+  const ruleUpper   = document.getElementById('rule-upper');
+  const ruleChars   = document.getElementById('rule-chars');
+
+  if (!input) return;
+
+  function setRule(el, pass) {
+    if (pass) {
+      el.textContent = el.textContent.replace('✗', '✓');
+      el.classList.add('valid');
+    } else {
+      el.textContent = el.textContent.replace('✓', '✗');
+      el.classList.remove('valid');
+    }
+  }
+
+  input.addEventListener('focus', function () {
+    box.style.display = 'block';
+  });
+
+  input.addEventListener('input', function () {
+    const val = this.value;
+
+    // Rule 1 – length between 3 and 15
+    setRule(ruleLength, val.length >= 3 && val.length <= 15);
+
+    // Rule 2 – at least 1 uppercase letter
+    setRule(ruleUpper, /[A-Z]/.test(val));
+
+    // Rule 3 – only a-z, A-Z, 0-9, underscore
+    setRule(ruleChars, val.length > 0 && /^[a-zA-Z0-9_]+$/.test(val));
+  });
+})();
+
+// --- Password live validation ---
+(function () {
+  const pwInput  = document.getElementById('id_password1');
+  const pwBox    = document.getElementById('password-constraints');
+  const pwLength = document.getElementById('pw-length');
+  const pwUpper  = document.getElementById('pw-upper');
+  const pwNumber = document.getElementById('pw-number');
+  const pwChars  = document.getElementById('pw-chars');
+
+  if (!pwInput) return;
+
+  function setRule(el, pass) {
+    if (pass) {
+      el.textContent = el.textContent.replace('✗', '✓');
+      el.classList.add('valid');
+    } else {
+      el.textContent = el.textContent.replace('✓', '✗');
+      el.classList.remove('valid');
+    }
+  }
+
+  pwInput.addEventListener('focus', function () {
+    pwBox.style.display = 'block';
+  });
+
+  pwInput.addEventListener('input', function () {
+    const val = this.value;
+
+    // Rule 1 – at least 8 characters
+    setRule(pwLength, val.length >= 8);
+
+    // Rule 2 – at least 1 uppercase
+    setRule(pwUpper, /[A-Z]/.test(val));
+
+    // Rule 3 – at least 1 number
+    setRule(pwNumber, /[0-9]/.test(val));
+
+    // Rule 4 – only letters, digits, _ and @
+    setRule(pwChars, val.length > 0 && /^[a-zA-Z0-9_@]+$/.test(val));
+  });
+})();
+</script>
+{% endblock %}

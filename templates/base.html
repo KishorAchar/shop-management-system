@@ -1,0 +1,196 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}JK SHOP{% endblock %} | Django Management</title>
+    <link rel="stylesheet" href="{% static 'css/cyber-theme.css' %}?v={% now 'U' %}">
+    {% block extra_css %}{% endblock %}
+    <style>
+        /* ── Global Toast Notifications ───────────────────────── */
+        #nexus-toast-container {
+            position: fixed;
+            top: 28px;
+            right: 28px;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+        .nexus-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            background: rgba(10, 10, 20, 0.96);
+            border-radius: 14px;
+            padding: 16px 20px;
+            min-width: 300px;
+            max-width: 380px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            border-left: 4px solid #00ff88;
+            pointer-events: all;
+            transform: translateX(120%);
+            opacity: 0;
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        opacity 0.3s ease;
+        }
+        .nexus-toast.show   { transform: translateX(0); opacity: 1; }
+        .nexus-toast.hiding { transform: translateX(120%); opacity: 0; }
+
+        .nexus-toast.success { border-left-color: #00ff88; }
+        .nexus-toast.error   { border-left-color: #ff4d6d; }
+        .nexus-toast.warning { border-left-color: #ffb400; }
+        .nexus-toast.info    { border-left-color: #00d4ff; }
+
+        .nexus-toast-icon { font-size: 26px; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+        .nexus-toast-body { flex: 1; }
+        .nexus-toast-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            letter-spacing: 0.3px;
+        }
+        .nexus-toast.success .nexus-toast-title { color: #00ff88; }
+        .nexus-toast.error   .nexus-toast-title { color: #ff4d6d; }
+        .nexus-toast.warning .nexus-toast-title { color: #ffb400; }
+        .nexus-toast.info    .nexus-toast-title { color: #00d4ff; }
+
+        .nexus-toast-msg  { font-size: 12px; color: #a0a0b8; line-height: 1.5; }
+        .nexus-toast-close {
+            background: none; border: none; color: #555; font-size: 16px;
+            cursor: pointer; line-height: 1; padding: 0; flex-shrink: 0;
+            transition: color 0.2s;
+        }
+        .nexus-toast-close:hover { color: #fff; }
+
+        /* Progress bar */
+        .nexus-toast-progress {
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 3px;
+            border-radius: 0 0 0 14px;
+            animation: toastProgress 4s linear forwards;
+        }
+        .nexus-toast { position: relative; overflow: hidden; }
+        .nexus-toast.success .nexus-toast-progress { background: #00ff88; }
+        .nexus-toast.error   .nexus-toast-progress { background: #ff4d6d; }
+        .nexus-toast.warning .nexus-toast-progress { background: #ffb400; }
+        .nexus-toast.info    .nexus-toast-progress { background: #00d4ff; }
+        @keyframes toastProgress { from { width: 100%; } to { width: 0%; } }
+    </style>
+</head>
+<body class="{% if user.is_authenticated and not user.dark_theme %}light-theme{% endif %}">
+
+    {% if user.is_authenticated %}
+        {% block dashboard_ui %}
+            <!-- Background Effects -->
+            <div class="bg-animation"></div>
+            <div class="grid-overlay"></div>
+            
+            <!-- Floating Navigation Dock -->
+            {% include 'includes/nav_dock.html' %}
+            
+            <!-- Floating Action Button -->
+            {% if user.role != 'customer' %}
+            <button class="fab">+</button>
+            {% endif %}
+        {% endblock dashboard_ui %}
+    {% endif %}
+
+    <!-- Main Rendering Area -->
+    <div class="{% block container_class %}{% if user.is_authenticated %}main-container{% endif %}{% endblock %}">
+        {% block content %}{% endblock %}
+        {% block auth_content %}{% endblock %}
+    </div>
+
+    <!-- Global Toast Container -->
+    <div id="nexus-toast-container"></div>
+
+    <!-- Django Messages → Toasts -->
+    {% if messages %}
+    <script>
+    (function() {
+        const tagMap = {
+            'success': { level:'success', icon:'✅', title:'Success' },
+            'error':   { level:'error',   icon:'🚫', title:'Error'   },
+            'warning': { level:'warning', icon:'⚠️', title:'Warning' },
+            'info':    { level:'info',    icon:'ℹ️', title:'Info'    },
+            'debug':   { level:'info',    icon:'🔧', title:'Debug'   },
+        };
+        const pending = [
+            {% for message in messages %}
+            { tag: '{{ message.tags|default:"info" }}', msg: '{{ message|escapejs }}' },
+            {% endfor %} 
+            ];
+        window.__nexusPendingMessages = pending;
+    })();
+    </script>
+    {% endif %}
+
+    <script src="{% static 'js/main.js' %}"></script>
+
+    <script>
+    /* ── Nexus Toast System ──────────────────────────────────── */
+    const _toastMeta = {
+        success: { icon: '✅', title: 'Success' },
+        error:   { icon: '🚫', title: 'Error'   },
+        warning: { icon: '⚠️', title: 'Warning' },
+        info:    { icon: 'ℹ️',  title: 'Info'    },
+    };
+
+    function showNexusToast(message, level = 'success', title = null, duration = 4000) {
+        const meta    = _toastMeta[level] || _toastMeta.info;
+        const container = document.getElementById('nexus-toast-container');
+
+        const toast = document.createElement('div');
+        toast.className = `nexus-toast ${level}`;
+        toast.innerHTML = `
+            <div class="nexus-toast-icon">${meta.icon}</div>
+            <div class="nexus-toast-body">
+                <div class="nexus-toast-title">${title || meta.title}</div>
+                <div class="nexus-toast-msg">${message}</div>
+            </div>
+            <button class="nexus-toast-close" onclick="dismissToast(this.parentElement)">✕</button>
+            <div class="nexus-toast-progress"></div>
+        `;
+        container.appendChild(toast);
+
+        // Trigger animation
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => toast.classList.add('show'));
+        });
+
+        // Auto dismiss
+        setTimeout(() => dismissToast(toast), duration);
+    }
+
+    function dismissToast(toast) {
+        if (!toast || toast.classList.contains('hiding')) return;
+        toast.classList.add('hiding');
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 500);
+    }
+
+    // Show any Django messages queued before this script loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const pending = window.__nexusPendingMessages || [];
+        const tagMap = {
+            'success': 'success', 'error': 'error',
+            'warning': 'warning', 'info': 'info', 'debug': 'info',
+        };
+        pending.forEach((item, i) => {
+            setTimeout(() => {
+                const level = tagMap[item.tag] || 'info';
+                showNexusToast(item.msg, level);
+            }, i * 200);
+        });
+    });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

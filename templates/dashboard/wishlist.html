@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Wishlist | JK SHOP{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>❤️ My Wishlist</h1>
+    <p>{{ wishlist_items.count }} saved item{{ wishlist_items.count|pluralize }}</p>
+</div>
+
+<style>
+.wishlist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+.wishlist-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 22px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.wishlist-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(124,58,237,0.25);
+    border-color: rgba(124,58,237,0.4);
+}
+.wl-icon {
+    font-size: 40px;
+    text-align: center;
+}
+.wl-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary, #fff);
+}
+.wl-price {
+    font-size: 20px;
+    font-weight: 800;
+    color: #7c3aed;
+    font-family: monospace;
+}
+.wl-stock {
+    font-size: 11px;
+    color: var(--text-secondary, #888);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.wl-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+.btn-order {
+    flex: 1;
+    padding: 9px 12px;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.btn-order:hover { opacity: 0.85; }
+.btn-remove {
+    padding: 9px 12px;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    color: #ef4444;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-remove:hover { background: rgba(239,68,68,0.2); }
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-secondary, #888);
+}
+.empty-state .big-icon { font-size: 64px; margin-bottom: 16px; }
+.empty-state h3 { font-size: 22px; color: var(--text-primary, #fff); margin-bottom: 8px; }
+.empty-state a {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border-radius: 10px;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+}
+</style>
+
+{% if wishlist_items %}
+<div class="wishlist-grid">
+    {% for item in wishlist_items %}
+    <div class="wishlist-card" id="wl-card-{{ item.product.id }}">
+        <div class="wl-icon">{{ item.product.icon }}</div>
+        <div>
+            <div class="wl-name">{{ item.product.name }}</div>
+            <div style="font-size:12px;color:var(--text-secondary,#888);margin-top:2px;">{{ item.product.get_category_display }}</div>
+        </div>
+        <div class="wl-price">₹{{ item.product.price }}</div>
+        <div class="wl-stock">
+            {% if item.product.stock == 0 %}
+                ❌ Out of Stock
+            {% elif item.product.stock < 10 %}
+                ⚠️ Only {{ item.product.stock }} left
+            {% else %}
+                ✅ In Stock ({{ item.product.stock }} units)
+            {% endif %}
+        </div>
+        <div class="wl-actions">
+            {% if item.product.stock > 0 %}
+            <button class="btn-order" onclick="quickOrderFromWishlist('{{ item.product.id }}', '{{ item.product.name|escapejs }}', {{ item.product.price }}, {{ item.product.stock }})">
+                ⚡ Order Now
+            </button>
+            {% endif %}
+            <button class="btn-remove" onclick="removeFromWishlist({{ item.product.id }}, this)">
+                🗑️ Remove
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="big-icon">💔</div>
+    <h3>Your wishlist is empty</h3>
+    <p>Browse JK Shop and save items you love!</p>
+    <a href="{% url 'inventory:inventory_bay' %}">🛍️ Browse JK Shop</a>
+</div>
+{% endif %}
+
+<script>
+function removeFromWishlist(productId, btn) {
+    fetch(`/dashboard/wishlist/toggle/${productId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const card = document.getElementById(`wl-card-${productId}`);
+            card.style.transition = 'opacity 0.3s, transform 0.3s';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.9)';
+            setTimeout(() => card.remove(), 300);
+            showNexusToast('Removed from wishlist', 'info', 'Wishlist');
+        }
+    });
+}
+
+function quickOrderFromWishlist(productId, name, price, stock) {
+    // Redirect to inventory bay to open quick order modal
+    window.location.href = `{% url 'inventory:inventory_bay' %}?quick_order=${productId}`;
+}
+</script>
+{% endblock %}

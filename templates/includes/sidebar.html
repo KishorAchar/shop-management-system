@@ -1,0 +1,30 @@
+{% load static %}
+<div class="sidebar-header">
+    <div class="logo">
+        <div class="logo-icon">🛍️</div>
+        <span>Shop</span>
+    </div>
+</div>
+
+<div class="user-profile-mini">
+    <div class="user-avatar">{{ user.avatar|default:"👤" }}</div>
+    <div class="user-info">
+        <div class="user-name">{{ user.username }}</div>
+        <div class="user-role">{{ user.get_role_display }}</div>
+    </div>
+</div>
+
+<div class="quick-stats">
+    <div class="quick-stat">
+        <span class="quick-stat-value">{{ user.orders.count|default:"0" }}</span>
+        <span class="quick-stat-label">Orders</span>
+    </div>
+    <div class="quick-stat">
+        <span class="quick-stat-value">{{ user.date_joined|date:"M Y" }}</span>
+        <span class="quick-stat-label">Joined</span>
+    </div>
+</div>
+
+<a href="{% url 'accounts:logout' %}" class="logout-btn">
+    <span>🚪</span> Terminate Session
+</a>

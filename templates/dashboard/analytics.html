@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Data Core{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Data Core</h1>
+    <p>Performance metrics & insights</p>
+</div>
+
+<div class="analytics-grid">
+    <div class="circular-chart">
+        <div class="chart-value">{{ conversion_rate }}%</div>
+        <div class="chart-label">Conversion Rate</div>
+    </div>
+    <div class="circular-chart">
+        <div class="chart-value">{{ avg_order_value|floatformat:0 }}</div>
+        <div class="chart-label">Avg Order Value</div>
+    </div>
+    <div class="glass-card stats-bars">
+        <div class="stat-bar-item">
+            <div class="stat-bar-header">
+                <span>Customer Retention</span>
+                <span style="color: var(--neon-blue);">{{ retention_rate }}%</span>
+            </div>
+            <div class="stat-bar-track">
+                <div class="stat-bar-fill" style="width: {{ retention_rate }}%;"></div>
+            </div>
+        </div>
+        <div class="stat-bar-item">
+            <div class="stat-bar-header">
+                <span>Inventory Turnover</span>
+                <span style="color: var(--neon-purple);">4.2x</span>
+            </div>
+            <div class="stat-bar-track">
+                <div class="stat-bar-fill" style="width: 70%;"></div>
+            </div>
+        </div>
+        <div class="stat-bar-item">
+            <div class="stat-bar-header">
+                <span>Profit Margin</span>
+                <span style="color: #ffd700;">23.5%</span>
+            </div>
+            <div class="stat-bar-track">
+                <div class="stat-bar-fill" style="width: 23.5%;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="glass-card" style="display: flex; flex-direction: column; justify-content: center;">
+        <h3 style="margin-bottom: 20px;">Top Products</h3>
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            {% for product in top_products %}
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="width: 12px; height: 12px; background: var(--neon-blue); border-radius: 50%;"></div>
+                <div style="flex: 1;">{{ product.name }}</div>
+                <div style="font-weight: 600;">{{ product.order_count }} sales</div>
+            </div>
+            {% empty %}
+            <div style="color: var(--text-secondary);">No sales data available</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="glass-card" style="margin-top: 30px;">
+    <h3 style="margin-bottom: 20px;">Revenue Timeline (Last 30 Days)</h3>
+    <div style="height: 300px; display: flex; align-items: end; gap: 10px; padding: 20px 0;">
+        {% for day in revenue_data %}
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+            <div style="width: 100%; background: linear-gradient(to top, var(--neon-blue), var(--neon-purple)); border-radius: 4px 4px 0 0; 
+                        height: {{ day.bar_height }}px; 
+                        min-height: 5px; transition: all 0.3s;">
+            </div>
+            <span style="font-size: 10px; color: var(--text-secondary);">{{ day.day }}</span>
+        </div>
+        {% empty %}
+        <div style="width: 100%; text-align: center; color: var(--text-secondary);">No revenue data available</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Animate bars on load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        document.querySelectorAll('.stat-bar-fill').forEach(bar => {
+            const width = bar.style.width;
+            bar.style.width = '0';
+            setTimeout(() => bar.style.width = width, 100);
+        });
+    }, 500);
+});
+</script>
+{% endblock %}
